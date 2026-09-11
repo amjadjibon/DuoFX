@@ -25,11 +25,11 @@ bash scripts/build.sh
 open build/Build/Products/Debug/DuoFX.app
 ```
 
-1. Open **Settings…** from the laptop menu icon.
-2. Move **Preview angle** to inspect the bundled image inside Settings. This needs no permission and works with the effect paused.
-3. Enable the effect to show that image over the built-in screen. Below the working angle, the panel folds; at the working angle, the overlay disappears.
-4. In **Controls**, choose **Live desktop** to capture the built-in display. Enable the effect and lower the preview angle to request Screen Recording permission. If macOS requires it, quit and reopen DuoFX after granting access.
-5. Choose **Lid sensor** to use the physical lid. **Diagnostics** reports discovery, unsupported reports, and read failures. Use **Manual preview** if detection fails.
+1. Click **Enable effect** in the menu. New installations use **Lid sensor + Live desktop**; the active input and content are shown in the menu and Settings.
+2. Close the lid below the angle shown by the Ready status (93° with the default calibration). The effect is intentionally hidden above that threshold. In **Settings → Controls**, use **Use current angle as working angle** to calibrate to your normal lid position.
+3. Allow Screen Recording when macOS requests it. If macOS requires a restart after granting access, quit and reopen DuoFX, then enable it again.
+4. **Diagnostics** reports sensor discovery, angle readings, unsupported reports, and read failures. If you previously selected **Manual preview**, switch **Controls → Angle control** to **Lid sensor** to follow physical movement; explicit selections are preserved on relaunch.
+5. For permission-free testing, keep the effect paused and move **Preview angle** in Settings. To show this preview over the screen, choose **Manual preview + Bundled image** in Controls, enable the effect, and lower the preview angle.
 
 Use **Pause all effects** in the menu at any time. Settings stays above the overlay and the overlay never accepts mouse or keyboard focus. Escape pauses when DuoFX receives the key event; global Escape can be unavailable without macOS input permission. DuoFX does not request that extra permission. The menu remains accessible.
 

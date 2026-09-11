@@ -28,13 +28,19 @@ final class AppModel {
         } else {
             configuration = EffectConfiguration()
         }
-        angleSource = AngleSource(rawValue: defaults.string(forKey: "angleSource") ?? "") ?? .manual
-        desktopSource = DesktopSource(rawValue: defaults.string(forKey: "desktopSource") ?? "") ?? .testImage
+        angleSource = AngleSource(rawValue: defaults.string(forKey: "angleSource") ?? "") ?? .sensor
+        desktopSource = DesktopSource(rawValue: defaults.string(forKey: "desktopSource") ?? "") ?? .liveDesktop
         manualAngle = configuration.workingAngle
         currentAngle = configuration.workingAngle
     }
 
     func pause() { isEnabled = false }
+
+    var inputSummary: String {
+        let input = angleSource == .sensor ? "Lid sensor" : "Manual slider"
+        let content = desktopSource == .liveDesktop ? "Live desktop" : "Bundled image"
+        return "\(input) · \(content)"
+    }
 
     private func persist() {
         if let data = try? JSONEncoder().encode(configuration.validated()) {

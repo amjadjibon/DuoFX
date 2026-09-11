@@ -120,7 +120,12 @@ final class EffectCoordinator {
         renderer?.configuration = c; renderer?.progress = model.progress
         guard gate.update(angle: angle, workingAngle: c.workingAngle) else {
             setTarget(nil)
-            model.status = source == .sensor && !sensor.isAvailable ? "Checking lid sensor…" : "Ready · lid at working angle"
+            let triggerAngle = Int((c.workingAngle - 2).rounded(.down))
+            if source == .sensor {
+                model.status = sensor.isAvailable ? "Ready · close lid below \(triggerAngle)°" : "Checking lid sensor…"
+            } else {
+                model.status = "Ready · lower preview angle below \(triggerAngle)°"
+            }
             return
         }
         guard let screen = screenProvider(),

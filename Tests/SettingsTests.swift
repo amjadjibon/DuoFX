@@ -9,8 +9,8 @@ final class SettingsTests: XCTestCase {
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
         let first = AppModel(defaults: defaults)
-        XCTAssertEqual(first.desktopSource, .testImage)
-        XCTAssertEqual(first.angleSource, .manual)
+        XCTAssertEqual(first.desktopSource, .liveDesktop)
+        XCTAssertEqual(first.angleSource, .sensor)
         first.configuration.workingAngle = 110
         first.configuration.apply(.shade)
         first.angleSource = .sensor; first.desktopSource = .liveDesktop
@@ -23,6 +23,18 @@ final class SettingsTests: XCTestCase {
         XCTAssertFalse(second.isEnabled)
         defaults.set(Data("invalid".utf8), forKey: "effectConfiguration")
         XCTAssertEqual(AppModel(defaults: defaults).configuration, EffectConfiguration())
+    }
+    @MainActor
+    func testExplicitManualPreviewChoiceSurvivesRelaunch() throws {
+        let suite = "DuoFXTests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let model = AppModel(defaults: defaults)
+        model.angleSource = .manual
+        model.desktopSource = .testImage
+        let restored = AppModel(defaults: defaults)
+        XCTAssertEqual(restored.angleSource, .manual)
+        XCTAssertEqual(restored.desktopSource, .testImage)
     }
     @MainActor
     func testManualSensorStopsDeliveringWhenPaused() {

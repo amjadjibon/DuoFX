@@ -21,6 +21,7 @@ struct SettingsView: View {
                 VStack(alignment: .leading, spacing: 3) {
                     Text("DuoFX").font(.title2.bold())
                     Text(model.status).font(.caption).foregroundStyle(.secondary)
+                    Text(model.inputSummary).font(.caption).foregroundStyle(.secondary)
                 }
                 Spacer()
                 Toggle("Enable effect", isOn: $model.isEnabled).toggleStyle(.switch)

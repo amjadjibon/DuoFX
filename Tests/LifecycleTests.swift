@@ -13,6 +13,7 @@ final class LifecycleTests: XCTestCase {
         }
         let suite = "DuoFXLifecycle.\(UUID().uuidString)"
         let model = AppModel(defaults: try XCTUnwrap(UserDefaults(suiteName: suite)))
+        model.angleSource = .manual
         model.desktopSource = .liveDesktop; model.manualAngle = 60; model.isEnabled = true
         let capture = DelayedCapture()
         let overlay = RecordingOverlay()

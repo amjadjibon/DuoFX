@@ -42,6 +42,7 @@ private struct MenuView: View {
     let coordinator: EffectCoordinator
     var body: some View {
         Text("DuoFX · \(model.status)")
+        Text(model.inputSummary)
         Toggle("Enable effect", isOn: $model.isEnabled)
         Button("Pause all effects") { coordinator.pause() }
             .keyboardShortcut(".", modifiers: [.command])

@@ -1,0 +1,73 @@
+import Foundation
+
+public func closingProgress(angle: Double, workingAngle: Double, minimumAngle: Double) -> Float {
+    guard angle.isFinite, workingAngle.isFinite, minimumAngle.isFinite else { return 0 }
+    return Float(min(max((workingAngle - angle) / max(workingAngle - minimumAngle, 1), 0), 1))
+}
+
+public func smoothstep(_ low: Float, _ high: Float, _ value: Float) -> Float {
+    let x = min(max((value - low) / max(high - low, 0.0001), 0), 1)
+    return x * x * (3 - 2 * x)
+}
+
+public func fadeAmount(progress: Float, start: Float) -> Float {
+    smoothstep(start, 1, progress)
+}
+
+public struct AngleSmoother {
+    public private(set) var angle: Double?
+    public private(set) var velocity = 0.0
+    private var timestamp: TimeInterval?
+    public init() {}
+
+    @discardableResult
+    public mutating func update(_ raw: Double, at time: TimeInterval) -> Double {
+        guard raw.isFinite, time.isFinite else { return angle ?? 95 }
+        guard let previous = angle, let last = timestamp, time > last, time - last < 1 else {
+            angle = raw; timestamp = time; velocity = 0
+            return raw
+        }
+        // Equivalent to alpha 0.18 at 60 Hz, independent of callback frequency.
+        let dt = time - last
+        let alpha = 1 - pow(1 - 0.18, dt * 60)
+        let next = previous + (raw - previous) * alpha
+        velocity = (next - previous) / dt
+        angle = next; timestamp = time
+        return next
+    }
+}
+
+public struct VisibilityGate {
+    public private(set) var isVisible = false
+    public init() {}
+    @discardableResult
+    public mutating func update(angle: Double, workingAngle: Double) -> Bool {
+        guard angle.isFinite, workingAngle.isFinite else { isVisible = false; return false }
+        // Enter two degrees below calibration, leave half a degree below it.
+        isVisible = isVisible ? angle < workingAngle - 0.5 : angle < workingAngle - 2
+        return isVisible
+    }
+}
+
+/// Reference implementation of the shader's hinge-anchored perspective projection.
+public func projectPoint(_ point: SIMD2<Float>, progress: Float,
+                         configuration: EffectConfiguration) -> SIMD2<Float> {
+    let c = configuration.validated()
+    let p = min(max(progress, 0), 1)
+    let theta = p * Float.pi * 0.5
+    let height = (point.y + 1) * 0.5
+    let depth = height * sin(theta) * Float(c.perspective)
+    let w = 1 + depth / Float(c.viewerDistance)
+    let y = height * cos(theta) * (1 + Float(c.verticalStretch) * p * (1 - p))
+    return SIMD2(point.x / w, 2 * y / w - 1)
+}
+
+public enum LidReport {
+    /// Apple 05ac:8104, sensor page 0x20, orientation usage 0x8a, feature report 1.
+    public static func decode(_ bytes: [UInt8]) -> Double? {
+        guard bytes.count >= 3, bytes.count <= 8, bytes[0] == 1 else { return nil }
+        let angle = UInt16(bytes[1]) | UInt16(bytes[2]) << 8
+        guard angle <= 180 else { return nil }
+        return Double(angle)
+    }
+}

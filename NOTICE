@@ -1,0 +1,13 @@
+DuoFX contains an adapted HID feature-report reader and device matching constants
+based on LidAngleSensor by Sam Gold.
+
+LidAngleSensor
+Copyright 2026 Sam Gold
+https://github.com/samhenrigold/LidAngleSensor
+Reference revision: f7e4e5cb46fe13a518091ce5d47f0ec2e3fecd80
+Licensed under the Apache License, Version 2.0.
+The full license is included in Licenses/LidAngleSensor.txt.
+
+Changed for DuoFX: serial queue ownership, bounded report validation, asynchronous
+diagnostic delivery, repeated-read failure handling, and lifecycle integration.
+No audio, branding, UI, or media assets from that project are included.

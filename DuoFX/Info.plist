@@ -12,5 +12,5 @@
     <key>LSMinimumSystemVersion</key><string>$(MACOSX_DEPLOYMENT_TARGET)</string>
     <key>LSUIElement</key><true/>
     <key>NSHighResolutionCapable</key><true/>
-    <key>NSScreenCaptureUsageDescription</key><string>DuoFX transforms the built-in desktop as you close the lid. Frames stay in memory on this Mac; audio is never captured.</string>
+    <key>NSScreenCaptureUsageDescription</key><string>DuoFX sweeps blur down the built-in desktop as you close the lid. Frames stay in memory on this Mac; audio is never captured.</string>
 </dict></plist>

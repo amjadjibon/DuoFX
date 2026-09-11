@@ -63,7 +63,7 @@ struct SettingsView: View {
                             .padding(7).background(.black.opacity(0.65), in: Capsule())
                             .foregroundStyle(.white).padding(10)
                     }
-                    .accessibilityLabel("Folding effect preview")
+                    .accessibilityLabel("Downward blur effect preview")
             }
             Form {
                 Picker("Style", selection: Binding(get: { model.configuration.style },
@@ -72,11 +72,11 @@ struct SettingsView: View {
                 }.pickerStyle(.segmented)
                 parameter("Preview angle", value: $model.manualAngle, range: 0...140, suffix: "°")
                     .disabled(model.angleSource == .sensor && model.isEnabled)
-                parameter("Perspective", value: $model.configuration.perspective, range: 0...1)
-                parameter("Vertical stretch", value: $model.configuration.verticalStretch, range: 0...1)
                 parameter("Blur", value: $model.configuration.blurStrength, range: 0...30, suffix: " px")
-                parameter("Shadow", value: $model.configuration.shadowStrength, range: 0...1)
-                parameter("Fade begins", value: $model.configuration.fadeStart, range: 0.3...0.95)
+                parameter("Edge softness", value: $model.configuration.edgeSoftness, range: 0.02...0.3)
+                parameter("Dim blurred area", value: $model.configuration.shadowStrength, range: 0...1)
+                Text("Blur moves down as you close the lid. Your desktop stays in place.")
+                    .font(.caption).foregroundStyle(.secondary)
             }.formStyle(.grouped)
         }.padding(8)
     }
@@ -106,12 +106,11 @@ struct SettingsView: View {
                     model.configuration.workingAngle = model.angleSource == .manual ? model.manualAngle : model.currentAngle
                     model.configuration = model.configuration.validated()
                 }.disabled(model.angleSource == .sensor && !model.sensorDiagnostic.isAvailable)
-                parameter("Viewer distance", value: $model.configuration.viewerDistance, range: 1...6, suffix: "×")
-                Text("Viewer distance is measured in display heights. The lower edge stays fixed at the hinge.")
+                Text("The working angle is fully clear. At the minimum angle, blur covers the entire display.")
                     .font(.caption).foregroundStyle(.secondary)
             }
             Section("Screen Recording") {
-                Text("Live desktop needs Screen Recording permission to transform your display. Frames stay in GPU memory on this Mac. DuoFX does not capture audio, save frames, or send them over the network.")
+                Text("Live desktop needs Screen Recording permission to blur your display. Frames stay in GPU memory on this Mac. DuoFX does not capture audio, save frames, or send them over the network.")
                 Button("Open Screen Recording settings") {
                     if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture") {
                         NSWorkspace.shared.open(url)

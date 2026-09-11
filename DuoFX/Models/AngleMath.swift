@@ -10,8 +10,13 @@ public func smoothstep(_ low: Float, _ high: Float, _ value: Float) -> Float {
     return x * x * (3 - 2 * x)
 }
 
-public func fadeAmount(progress: Float, start: Float) -> Float {
-    smoothstep(start, 1, progress)
+/// Coverage at a normalized vertical coordinate: zero is the top of the display.
+public func blurCoverage(y: Float, progress: Float, edgeSoftness: Float) -> Float {
+    guard y.isFinite, progress.isFinite, edgeSoftness.isFinite else { return 0 }
+    let p = min(max(progress, 0), 1)
+    let feather = min(max(edgeSoftness, 0.02), 0.3)
+    let boundary = -feather + (1 + 2 * feather) * p
+    return 1 - smoothstep(boundary - feather, boundary + feather, min(max(y, 0), 1))
 }
 
 public struct AngleSmoother {
@@ -47,19 +52,6 @@ public struct VisibilityGate {
         isVisible = isVisible ? angle < workingAngle - 0.5 : angle < workingAngle - 2
         return isVisible
     }
-}
-
-/// Reference implementation of the shader's hinge-anchored perspective projection.
-public func projectPoint(_ point: SIMD2<Float>, progress: Float,
-                         configuration: EffectConfiguration) -> SIMD2<Float> {
-    let c = configuration.validated()
-    let p = min(max(progress, 0), 1)
-    let theta = p * Float.pi * 0.5
-    let height = (point.y + 1) * 0.5
-    let depth = height * sin(theta) * Float(c.perspective)
-    let w = 1 + depth / Float(c.viewerDistance)
-    let y = height * cos(theta) * (1 + Float(c.verticalStretch) * p * (1 - p))
-    return SIMD2(point.x / w, 2 * y / w - 1)
 }
 
 public enum LidReport {

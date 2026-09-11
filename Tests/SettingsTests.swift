@@ -37,6 +37,24 @@ final class SettingsTests: XCTestCase {
         XCTAssertEqual(restored.desktopSource, .testImage)
     }
     @MainActor
+    func testUpgradeKeepsCalibrationAndBlurFromFoldingVersion() throws {
+        let suite = "DuoFXTests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let legacy = Data(#"{"style":"shade","workingAngle":115,"minimumAngle":30,"perspective":0.75,"verticalStretch":0.25,"blurStrength":18,"shadowStrength":0.3,"fadeStart":0.72,"viewerDistance":2.5}"#.utf8)
+        defaults.set(legacy, forKey: "effectConfiguration")
+        let model = AppModel(defaults: defaults)
+        XCTAssertEqual(model.configuration.style, .shade)
+        XCTAssertEqual(model.configuration.workingAngle, 115)
+        XCTAssertEqual(model.configuration.minimumAngle, 30)
+        XCTAssertEqual(model.configuration.blurStrength, 18)
+        XCTAssertEqual(model.configuration.shadowStrength, 0.3)
+        XCTAssertEqual(model.configuration.edgeSoftness, 0.12)
+        model.configuration.edgeSoftness = 0.2
+        XCTAssertEqual(AppModel(defaults: defaults).configuration.edgeSoftness, 0.2)
+    }
+
+    @MainActor
     func testManualSensorStopsDeliveringWhenPaused() {
         let sensor = ManualAngleSensor()
         var readings: [Double] = []

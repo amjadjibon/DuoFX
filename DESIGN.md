@@ -1,5 +1,7 @@
 # DuoFX: Building a Lid-Aware Desktop Folding Effect for macOS
 
+> **Visual behavior update:** The implementation now keeps the desktop fixed and sweeps a soft blur boundary from top to bottom as the lid closes. Opening reverses the sweep. Uncovered pixels are transparent in the overlay; the blurred region samples the desktop at unchanged coordinates. Blur strength, edge softness, and optional dimming replace perspective, stretch, viewing distance, and fade-to-black controls. The folding/projection sections below describe the original proposal and are superseded by this update. Capture, sensor, privacy, and lifecycle requirements still apply.
+
 ## 1. Project overview
 
 DuoFX is a native macOS menu-bar application that visually folds, tilts, blurs, shades, and fades the desktop while the user closes the MacBook lid.

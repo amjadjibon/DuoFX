@@ -1,6 +1,6 @@
 # DuoFX
 
-A native macOS menu-bar app that folds the built-in desktop as a MacBook lid closes. Implements the capture, sensor, rendering, settings, and lifecycle architecture in [DESIGN.md](DESIGN.md).
+A native macOS menu-bar app that sweeps blur down the built-in desktop as a MacBook lid closes. The desktop remains fixed in place. The capture, sensor, and lifecycle architecture comes from [DESIGN.md](DESIGN.md); the original folding projection has been replaced by a blur sweep.
 
 Requires **macOS 14 or later, Apple silicon, and Xcode 15 or later**. Build and automated validation were performed with Xcode 26.6. Physical sensor support depends on the Mac's HID interface; manual preview is available independently.
 
@@ -35,7 +35,7 @@ Use **Pause all effects** in the menu at any time. Settings stays above the over
 
 ## Included
 
-- A 64-segment hinge-anchored Metal mesh with perspective-correct texture interpolation, adjustable viewing distance and stretch, MPS Gaussian blur, shading, and fade to black.
+- A fixed full-screen Metal quad with MPS Gaussian blur and a soft boundary that travels from top to bottom. Opening the lid reverses the sweep. Settings control blur radius, edge softness, and dimming of the blurred area.
 - Silk, Shade, and Frost presets; working/minimum angle calibration; persisted appearance and input choices. Enabling is intentionally not persisted.
 - A deterministic bundled PNG for permission-free development and an embedded Metal preview that only redraws when settings change.
 - Built-in-display-only ScreenCaptureKit capture at up to 60 FPS, BGRA IOSurface textures, complete-frame filtering, no cursor or audio, and exclusion of every DuoFX window.
@@ -43,7 +43,7 @@ Use **Pause all effects** in the menu at any time. Settings stays above the over
 - Asynchronous HID discovery/polling on a dedicated queue, Apple vendor/product and usage checks, bounded report decoding, repeated-read failure handling, and explicit device teardown.
 - Time-based angle smoothing, signed velocity, and hysteresis. Capture stops when the overlay becomes hidden, when paused, on sleep/session inactivity/lock, and on quit. Screen configuration changes rebuild the capture target.
 
-All captured content stays on the device in memory. The app has no network, analytics, audio, or frame-saving functionality. A black backdrop masks the unfolded desktop outside the projected mesh. Settings and menu controls remain above it; the real desktop still receives mouse events, so its hit targets do not move with the visual effect.
+All captured content stays on the device in memory. The app has no network, analytics, audio, or frame-saving functionality. The overlay is fully transparent below the blur boundary and samples the blurred desktop at its original coordinates above it. Settings and menu controls remain above the effect, and the real desktop receives mouse events at the same visual positions.
 
 ## Validation
 
@@ -53,7 +53,9 @@ xcodebuild -project DuoFX.xcodeproj -scheme DuoFX \
   -configuration Release -derivedDataPath build build
 ```
 
-Tests cover mapping boundaries, smoothing/velocity, hysteresis, fade, report decoding, independently calculated projection points, presets, persistence, manual-provider lifecycle, and capture startup/pause/source-switch/failure/sleep/quit races using a controlled capture provider. Offscreen Metal tests compile the actual shader and verify corner colors, texture orientation, masking, blur, transparency, and full fade at representative angles. These tests do not request Screen Recording permission or display a full-screen overlay. GPU/display-dependent tests explicitly skip if their hardware is absent.
+Tests cover mapping boundaries, smoothing/velocity, hysteresis, blur coverage, report decoding, presets, settings migration, persistence, manual-provider lifecycle, and capture startup/pause/source-switch/failure/sleep/quit races using a controlled capture provider. Offscreen Metal tests compile the actual shader and verify that desktop pixels never move, that only the covered region blurs, and that the uncovered overlay is transparent. They also check full blur coverage at the minimum angle and correct reversal when opening. These tests do not request Screen Recording permission or display a full-screen overlay. GPU/display-dependent tests explicitly skip if their hardware is absent.
+
+To render open, half-closed, and closed snapshots of the bundled fixture, run `DUOFX_PREVIEW_SNAPSHOTS=/tmp/duofx-preview swift test --filter RenderingTests`. Only the bundled test image is saved; captured desktop content is never used by these tests.
 
 To additionally probe the physical lid sensor, run `DUOFX_HARDWARE_TESTS=1 swift test --filter HardwareTests`. This samples the sensor briefly without moving the lid, requesting capture permission, or showing an overlay. It reports an explicit skip for unsupported hardware.
 
@@ -68,7 +70,7 @@ Before distributing, validate on the target MacBook:
 - Confirm menu/Settings access and mouse passthrough throughout the effect.
 - Profile frame rate, GPU/CPU load, memory, and energy with Instruments at the built-in display's native resolution.
 
-The automated suite does not establish physical lid tracking, actual Screen Recording permission behavior, multi-Space behavior, or sustained 60 FPS. The projection assumes a viewer aligned with the hinge; viewing distance is adjustable, but eye-height calibration is not implemented. HID report and screen-lock notification behavior are undocumented and may change across macOS versions.
+The automated suite does not establish physical lid tracking, actual Screen Recording permission behavior, multi-Space behavior, or sustained 60 FPS. HID report and screen-lock notification behavior are undocumented and may change across macOS versions.
 
 ## Project layout
 

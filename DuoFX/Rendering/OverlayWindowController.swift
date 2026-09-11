@@ -27,7 +27,7 @@ final class OverlayWindowController: OverlayPresenting {
         guard panel == nil else { return }
         let panel = PassthroughPanel(contentRect: screen.frame,
             styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
-        // Below menus so Pause remains readable while the desktop is folded.
+        // Below menus so Pause remains readable while the desktop is blurred.
         panel.level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.mainMenuWindow)) - 1)
         panel.backgroundColor = .clear; panel.isOpaque = false; panel.hasShadow = false
         panel.ignoresMouseEvents = true; panel.hidesOnDeactivate = false

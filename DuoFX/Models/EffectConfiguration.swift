@@ -9,11 +9,11 @@ public enum EffectStyle: String, CaseIterable, Identifiable, Codable, Sendable {
         value.style = self
         switch self {
         case .silk:
-            value.perspective = 0.5; value.blurStrength = 1.5; value.shadowStrength = 0.15
+            value.edgeSoftness = 0.08; value.blurStrength = 1.5; value.shadowStrength = 0.15
         case .shade:
-            value.perspective = 0.6; value.blurStrength = 4; value.shadowStrength = 0.8
+            value.edgeSoftness = 0.10; value.blurStrength = 4; value.shadowStrength = 0.8
         case .frost:
-            value.perspective = 0.85; value.blurStrength = 12; value.shadowStrength = 0.4
+            value.edgeSoftness = 0.12; value.blurStrength = 12; value.shadowStrength = 0.4
         }
         return value
     }
@@ -33,31 +33,41 @@ public struct EffectConfiguration: Codable, Equatable, Sendable {
     public var style: EffectStyle = .frost
     public var workingAngle = 95.0
     public var minimumAngle = 25.0
-    public var perspective = 0.85
-    public var verticalStretch = 0.25
+    public var edgeSoftness = 0.12
     public var blurStrength = 12.0
     public var shadowStrength = 0.4
-    public var fadeStart = 0.72
-    public var viewerDistance = 2.5
     public init() {}
+
+    private enum CodingKeys: String, CodingKey {
+        case style, workingAngle, minimumAngle, edgeSoftness, blurStrength, shadowStrength
+    }
+
+    public init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        style = try values.decodeIfPresent(EffectStyle.self, forKey: .style) ?? .frost
+        workingAngle = try values.decodeIfPresent(Double.self, forKey: .workingAngle) ?? 95
+        minimumAngle = try values.decodeIfPresent(Double.self, forKey: .minimumAngle) ?? 25
+        // Older installations have folding parameters but no blur-edge setting.
+        // Keep their calibration and appearance instead of resetting all preferences.
+        edgeSoftness = try values.decodeIfPresent(Double.self, forKey: .edgeSoftness) ?? 0.12
+        blurStrength = try values.decodeIfPresent(Double.self, forKey: .blurStrength) ?? 12
+        shadowStrength = try values.decodeIfPresent(Double.self, forKey: .shadowStrength) ?? 0.4
+    }
 
     public func validated() -> Self {
         var copy = self
         copy.workingAngle = clamp(workingAngle, 40...140, fallback: 95)
         copy.minimumAngle = clamp(minimumAngle, 0...(copy.workingAngle - 5), fallback: 25)
-        copy.perspective = clamp(perspective, 0...1, fallback: 0.85)
-        copy.verticalStretch = clamp(verticalStretch, 0...1, fallback: 0.25)
+        copy.edgeSoftness = clamp(edgeSoftness, 0.02...0.3, fallback: 0.12)
         copy.blurStrength = clamp(blurStrength, 0...30, fallback: 12)
         copy.shadowStrength = clamp(shadowStrength, 0...1, fallback: 0.4)
-        copy.fadeStart = clamp(fadeStart, 0.3...0.95, fallback: 0.72)
-        copy.viewerDistance = clamp(viewerDistance, 1...6, fallback: 2.5)
         return copy
     }
 
     public mutating func apply(_ style: EffectStyle) {
         let preset = style.preset
         self.style = style
-        perspective = preset.perspective
+        edgeSoftness = preset.edgeSoftness
         blurStrength = preset.blurStrength
         shadowStrength = preset.shadowStrength
     }

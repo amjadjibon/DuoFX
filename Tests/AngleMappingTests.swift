@@ -21,12 +21,6 @@ final class AngleMappingTests: XCTestCase {
         XCTAssertFalse(gate.update(angle: 93.1, workingAngle: 95))
         XCTAssertFalse(gate.update(angle: .nan, workingAngle: 95))
     }
-    func testFadeThresholdAndCompletion() {
-        XCTAssertEqual(fadeAmount(progress: 0.71, start: 0.72), 0)
-        XCTAssertEqual(fadeAmount(progress: 0.72, start: 0.72), 0)
-        XCTAssertEqual(fadeAmount(progress: 0.86, start: 0.72), 0.5, accuracy: 0.00001)
-        XCTAssertEqual(fadeAmount(progress: 1, start: 0.72), 1)
-    }
     func testReportDecoderRejectsUnknownLayouts() {
         XCTAssertEqual(LidReport.decode([1, 95, 0, 0, 0, 0, 0, 0]), 95)
         XCTAssertEqual(LidReport.decode([1, 180, 0]), 180)

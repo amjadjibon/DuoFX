@@ -30,13 +30,10 @@ enum AppResources {
 
 struct RenderUniforms {
     var progress: Float
-    var perspective: Float
-    var stretch: Float
     var opacity: Float
     var shadow: Float
-    var fade: Float
-    var viewerDistance: Float
-    var padding: Float = 0
+    var edgeSoftness: Float
+    var isOverlay: UInt32
 }
 
 /// Submission is thread-safe. Rendering and configuration run on the main thread.
@@ -68,8 +65,8 @@ final class MetalRenderer: NSObject, MTKViewDelegate, @unchecked Sendable {
         }
         let library = try device.makeLibrary(source: String(contentsOf: url), options: nil)
         let descriptor = MTLRenderPipelineDescriptor()
-        descriptor.vertexFunction = library.makeFunction(name: "bendVertex")
-        descriptor.fragmentFunction = library.makeFunction(name: "bendFragment")
+        descriptor.vertexFunction = library.makeFunction(name: "blurVertex")
+        descriptor.fragmentFunction = library.makeFunction(name: "blurFragment")
         descriptor.colorAttachments[0].pixelFormat = .bgra8Unorm
         pipeline = try device.makeRenderPipelineState(descriptor: descriptor)
         let samplerDescriptor = MTLSamplerDescriptor()
@@ -77,7 +74,7 @@ final class MetalRenderer: NSObject, MTKViewDelegate, @unchecked Sendable {
         samplerDescriptor.sAddressMode = .clampToEdge; samplerDescriptor.tAddressMode = .clampToEdge
         guard let sampler = device.makeSamplerState(descriptor: samplerDescriptor) else { throw RendererError.allocation }
         self.sampler = sampler
-        let vertices = MeshFactory.grid()
+        let vertices = MeshFactory.fullScreenQuad()
         vertexCount = vertices.count
         guard let mesh = device.makeBuffer(bytes: vertices, length: vertices.count * MemoryLayout<MeshVertex>.stride,
                                           options: .storageModeShared) else { throw RendererError.allocation }
@@ -138,13 +135,13 @@ final class MetalRenderer: NSObject, MTKViewDelegate, @unchecked Sendable {
         let c = configuration.validated()
         let p = min(max(progress, 0), 1)
         let opacity: Float = isOverlay ? smoothstep(0, 0.035, p) : 1
-        pass.colorAttachments[0].clearColor = MTLClearColor(red: 0, green: 0, blue: 0, alpha: Double(opacity))
+        pass.colorAttachments[0].clearColor = MTLClearColor(red: 0, green: 0, blue: 0, alpha: 0)
         pass.colorAttachments[0].loadAction = .clear
         pass.colorAttachments[0].storeAction = .store
         var texture = frame.texture
-        // Quantizing sigma avoids creating a new MPS kernel for every sensor reading.
-        let sigma = (Float(c.blurStrength) * p * 2).rounded() / 2
-        if sigma >= 0.5 {
+        // The blur's coverage moves with the lid; its radius stays constant.
+        let sigma = (Float(c.blurStrength) * 2).rounded() / 2
+        if p > 0 && sigma >= 0.5 {
             if blurTexture?.width != texture.width || blurTexture?.height != texture.height {
                 let descriptor = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: .bgra8Unorm,
                     width: texture.width, height: texture.height, mipmapped: false)
@@ -160,14 +157,13 @@ final class MetalRenderer: NSObject, MTKViewDelegate, @unchecked Sendable {
             texture = blurred
         }
         guard let encoder = command.makeRenderCommandEncoder(descriptor: pass) else { throw RendererError.allocation }
-        var uniforms = RenderUniforms(progress: p, perspective: Float(c.perspective),
-            stretch: Float(c.verticalStretch), opacity: opacity, shadow: Float(c.shadowStrength),
-            fade: fadeAmount(progress: p, start: Float(c.fadeStart)), viewerDistance: Float(c.viewerDistance))
+        var uniforms = RenderUniforms(progress: p, opacity: opacity,
+            shadow: Float(c.shadowStrength), edgeSoftness: Float(c.edgeSoftness), isOverlay: isOverlay ? 1 : 0)
         encoder.setRenderPipelineState(pipeline)
         encoder.setVertexBuffer(mesh, offset: 0, index: 0)
-        encoder.setVertexBytes(&uniforms, length: MemoryLayout<RenderUniforms>.stride, index: 1)
         encoder.setFragmentBytes(&uniforms, length: MemoryLayout<RenderUniforms>.stride, index: 0)
         encoder.setFragmentTexture(texture, index: 0)
+        encoder.setFragmentTexture(frame.texture, index: 1)
         encoder.setFragmentSamplerState(sampler, index: 0)
         encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: vertexCount)
         encoder.endEncoding()

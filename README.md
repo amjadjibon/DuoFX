@@ -16,7 +16,9 @@ The installer mounts the DMG, verifies and copies `DuoFX.app`, gracefully quits 
 
 Click the **folding-laptop icon in the top menu bar** for **Enable effect**, **Pause all effects**, **Settings…** (⌘,), and **Quit DuoFX** (⌘Q). DuoFX runs as a menu-bar app, so it does not add a Dock icon.
 
-Open `DuoFX.xcodeproj`, select the **DuoFX** scheme and **My Mac**, and Run. The app appears as a laptop icon in the menu bar. The project uses local ad-hoc signing and does not require a developer account.
+Open `DuoFX.xcodeproj`, select the **DuoFX** scheme and **My Mac**, and Run. The app appears as a laptop icon in the menu bar. The project and scripts use an **Apple Development** certificate from your keychain so macOS can recognize the same application across rebuilds. Create one through Xcode's account settings if needed. To choose a particular existing certificate, set `SIGNING_IDENTITY` to its name or fingerprint when running the build script.
+
+The build script writes the chosen certificate fingerprint and team to ignored `Signing.local.xcconfig`. Xcode also reads this file through `Signing.xcconfig`. Run `python3 scripts/configure-signing.py` once before building directly from a fresh Xcode checkout, or select your certificate/team in Xcode. The script uses existing keychain identities and never creates or exports private keys.
 
 Or build the app from Terminal:
 
@@ -32,6 +34,12 @@ open build/Build/Products/Debug/DuoFX.app
 5. For permission-free testing, keep the effect paused and move **Preview angle** in Settings. To show this preview over the screen, choose **Manual preview + Bundled image** in Controls, enable the effect, and lower the preview angle.
 
 Use **Pause all effects** in the menu at any time. Settings stays above the overlay and the overlay never accepts mouse or keyboard focus. Escape pauses when DuoFX receives the key event; global Escape can be unavailable without macOS input permission. DuoFX does not request that extra permission. The menu remains accessible.
+
+### Permission enabled but capture still denied
+
+Older DuoFX builds used ad-hoc signatures, which changed the application's identity on rebuild. macOS may retain an enabled switch for the previous identity while denying the replacement. The current project uses certificate signing to keep its identity stable across builds. [Apple confirms this signing behavior](https://developer.apple.com/forums/thread/819406).
+
+When upgrading from an old build, quit DuoFX, remove its existing entry from **System Settings → Privacy & Security → Screen Recording**, add **`/Applications/DuoFX.app`** again (or your custom installation path), enable it, and reopen the app. Add the installed app rather than a copy in a DMG or build folder. This one-time reauthorization remains a macOS permission decision; the installer does not edit privacy databases or grant access automatically.
 
 ## Included
 
@@ -84,7 +92,7 @@ After adding source files, regenerate the checked-in Xcode project with `python3
 
 ## Packaging
 
-`bash scripts/package.sh` creates `build/DuoFX.dmg` containing the Release app and an Applications link. This is a **local development build**, ad-hoc signed and not notarized.
+`bash scripts/package.sh` creates `build/DuoFX.dmg` containing the Release app and an Applications link. This is a **local development build**, signed with Apple Development and not notarized.
 
 To install an existing DMG without rebuilding, use `./scripts/install.sh build/DuoFX.dmg`. You can also open the DMG in Finder, drag DuoFX to Applications, and launch it there.
 

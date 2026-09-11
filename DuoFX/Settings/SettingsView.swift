@@ -118,6 +118,8 @@ struct SettingsView: View {
                 }
                 Text("After granting permission, quit and reopen DuoFX if capture does not start.")
                     .font(.caption).foregroundStyle(.secondary)
+                Text("If the switch is already on after an update, quit DuoFX, remove its old Screen Recording entry, and add the installed app again.")
+                    .font(.caption).foregroundStyle(.secondary)
             }
         }.formStyle(.grouped)
     }

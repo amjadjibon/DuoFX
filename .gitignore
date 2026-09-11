@@ -4,3 +4,4 @@ build/
 *.xcuserstate
 xcuserdata/
 .swiftpm/
+Signing.local.xcconfig

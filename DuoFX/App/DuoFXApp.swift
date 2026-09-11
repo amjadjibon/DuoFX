@@ -5,9 +5,13 @@ import SwiftUI
 struct DuoFXApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
     var body: some Scene {
-        MenuBarExtra("DuoFX", systemImage: "laptopcomputer") {
+        MenuBarExtra {
             MenuView(model: delegate.model, coordinator: delegate.coordinator)
+        } label: {
+            Image(nsImage: MenuBarIcon.image)
+                .accessibilityLabel("DuoFX")
         }
+        .menuBarExtraStyle(.menu)
         Settings { SettingsView(model: delegate.model) }
     }
 }
@@ -33,6 +37,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 }
 
 private struct MenuView: View {
+    @Environment(\.openSettings) private var openSettings
     @Bindable var model: AppModel
     let coordinator: EffectCoordinator
     var body: some View {
@@ -42,7 +47,12 @@ private struct MenuView: View {
             .keyboardShortcut(".", modifiers: [.command])
         if let message = model.errorMessage { Text(message) }
         Divider()
-        SettingsLink { Label("Settings…", systemImage: "gear") }
+        Button {
+            NSApplication.shared.activate(ignoringOtherApps: true)
+            openSettings()
+        } label: {
+            Label("Settings…", systemImage: "gear")
+        }
             .keyboardShortcut(",")
         Divider()
         Button("Quit DuoFX") { NSApplication.shared.terminate(nil) }

@@ -10,7 +10,8 @@ let package = Package(
         .executableTarget(
             name: "DuoFX", dependencies: ["DuoFXCore"], path: "DuoFX",
             exclude: ["Models", "Info.plist"],
-            resources: [.copy("Rendering/Shaders.metal"), .copy("Resources/Preview.png")],
+            resources: [.copy("Rendering/Shaders.metal"), .copy("Resources/Preview.png"),
+                        .copy("Resources/DuoFX.icns")],
             linkerSettings: [
                 .linkedFramework("ScreenCaptureKit"), .linkedFramework("MetalKit"),
                 .linkedFramework("MetalPerformanceShaders"), .linkedFramework("IOKit")

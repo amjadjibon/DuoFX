@@ -6,6 +6,16 @@ Requires **macOS 14 or later, Apple silicon, and Xcode 15 or later**. Build and 
 
 ## Run
 
+Build a Release DMG, install it into `/Applications`, and launch DuoFX with one command:
+
+```sh
+./scripts/build-and-install.sh
+```
+
+The installer mounts the DMG, verifies and copies `DuoFX.app`, gracefully quits an older running copy before replacing it, ejects the image, and launches the installed app. If `/Applications` is not writable, use `./scripts/build-and-install.sh "$HOME/Applications"`. It does not use `sudo` or change your macOS security settings.
+
+Click the **folding-laptop icon in the top menu bar** for **Enable effect**, **Pause all effects**, **Settings…** (⌘,), and **Quit DuoFX** (⌘Q). DuoFX runs as a menu-bar app, so it does not add a Dock icon.
+
 Open `DuoFX.xcodeproj`, select the **DuoFX** scheme and **My Mac**, and Run. The app appears as a laptop icon in the menu bar. The project uses local ad-hoc signing and does not require a developer account.
 
 Or build the app from Terminal:
@@ -68,9 +78,13 @@ Metal source is bundled and compiled once per renderer with `makeLibrary`, so a 
 
 After adding source files, regenerate the checked-in Xcode project with `python3 scripts/generate-project.py`. The fixture can be regenerated with `python3 scripts/generate-preview.py`. Neither script needs third-party packages.
 
+`scripts/generate-icon.sh` regenerates the bundled `.icns` app icon using AppKit and `iconutil`. The menu-bar icon is a native template image that adapts to light/dark appearances; both icons share the folding-laptop drawing in `MenuBarIcon.swift`.
+
 ## Packaging
 
 `bash scripts/package.sh` creates `build/DuoFX.dmg` containing the Release app and an Applications link. This is a **local development build**, ad-hoc signed and not notarized.
+
+To install an existing DMG without rebuilding, use `./scripts/install.sh build/DuoFX.dmg`. You can also open the DMG in Finder, drag DuoFX to Applications, and launch it there.
 
 For distribution, use your Apple Developer team and Developer ID Application certificate in Xcode, archive the Release scheme, export with Developer ID signing and hardened runtime, notarize with `xcrun notarytool submit --wait`, and staple with `xcrun stapler staple`. Create a DMG from that signed and stapled app and validate it on another supported Mac. Developer ID signing, notarization, and installation on a second Mac require credentials/hardware and are not performed by the local packaging script. Launch at login and sound effects are not included.
 

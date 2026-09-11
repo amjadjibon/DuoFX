@@ -22,20 +22,47 @@ def array(items):
     return "(" + ", ".join(items) + ",)" if items else "()"
 
 
-sources, resources, references = [], [], []
+sources, resources = [], []
+folder_files = {}
+
+
+def reference_in_folder(path, reference):
+    folder_files.setdefault(path.parent.relative_to(root).as_posix(), []).append(reference)
+
+
 for path in sorted((root / "DuoFX").rglob("*")) + [root / "NOTICE", root / "Licenses/LidAngleSensor.txt"]:
-    if path.suffix not in (".swift", ".metal", ".png", ".txt") and path.name != "NOTICE":
+    if path.suffix not in (".swift", ".metal", ".png", ".txt", ".icns", ".plist") and path.name != "NOTICE":
         continue
     rel = path.relative_to(root).as_posix()
-    kind = {".swift": "sourcecode.swift", ".metal": "text", ".png": "image.png"}.get(path.suffix, "text")
+    kind = {".swift": "sourcecode.swift", ".metal": "text", ".png": "image.png",
+            ".icns": "image.icns", ".plist": "text.plist.xml"}.get(path.suffix, "text")
     ref = add(rel, f'isa = PBXFileReference; lastKnownFileType = {kind}; path = {json.dumps(rel)}; sourceTree = SOURCE_ROOT;')
+    reference_in_folder(path, ref)
+    if path.name == "Info.plist":
+        continue
     build = add(rel + ":build", f"isa = PBXBuildFile; fileRef = {ref};")
-    references.append(ref)
     (sources if path.suffix == ".swift" else resources).append(build)
+
+for name in ("README.md", "DESIGN.md", "Package.swift"):
+    ref = add(name, f'isa = PBXFileReference; path = {json.dumps(name)}; sourceTree = SOURCE_ROOT;')
+    reference_in_folder(root / name, ref)
+
+
+def folder_group(folder):
+    children = list(folder_files.get(folder, []))
+    direct_folders = sorted({Path(other).parts[len(Path(folder).parts)]
+                             for other in folder_files
+                             if Path(folder) in Path(other).parents})
+    for child in direct_folders:
+        children.append(folder_group((Path(folder) / child).as_posix()))
+    return add("folder:" + folder, f'isa = PBXGroup; children = {array(children)}; name = {json.dumps(Path(folder).name)}; sourceTree = "<group>";')
+
 
 product = add("product", 'isa = PBXFileReference; explicitFileType = wrapper.application; path = DuoFX.app; sourceTree = BUILT_PRODUCTS_DIR;')
 products = add("products", f'isa = PBXGroup; children = {array([product])}; name = Products; sourceTree = "<group>";')
-main = add("main", f'isa = PBXGroup; children = {array(references + [products])}; sourceTree = "<group>";')
+top_folders = sorted({Path(folder).parts[0] for folder in folder_files if folder != "."})
+main_children = [folder_group(folder) for folder in top_folders] + folder_files.get(".", []) + [products]
+main = add("main", f'isa = PBXGroup; children = {array(main_children)}; sourceTree = "<group>";')
 source_phase = add("sources", f"isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = {array(sources)}; runOnlyForDeploymentPostprocessing = 0;")
 resource_phase = add("resources", f"isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = {array(resources)}; runOnlyForDeploymentPostprocessing = 0;")
 framework_phase = add("frameworks", "isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0;")

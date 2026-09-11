@@ -15,6 +15,7 @@ protocol ScreenCapturing: AnyObject {
 final class ScreenCaptureService: ScreenCapturing {
     private var stream: SCStream?
     private var output: CaptureOutput?
+    private var identityWindow: NSWindow?
     private var generation = 0
     private let queue = DispatchQueue(label: "com.duofx.capture", qos: .userInteractive)
 
@@ -26,7 +27,7 @@ final class ScreenCaptureService: ScreenCapturing {
         guard CGPreflightScreenCaptureAccess() || CGRequestScreenCaptureAccess() else {
             throw CaptureError.permissionDenied
         }
-        let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
+        let content = try await shareableContent()
         guard token == generation else { throw CancellationError() }
         guard CGDisplayIsBuiltin(displayID) != 0,
               let display = content.displays.first(where: { $0.displayID == displayID }) else {
@@ -61,6 +62,22 @@ final class ScreenCaptureService: ScreenCapturing {
         }
     }
 
+    func shareableContent() async throws -> SCShareableContent {
+        // Before Settings has ever opened, the app may have no WindowServer
+        // window at all. Keep an unordered window for application discovery.
+        // It is never shown and carries no desktop content.
+        if identityWindow == nil {
+            let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1, height: 1),
+                                  styleMask: .borderless, backing: .buffered, defer: false)
+            window.isReleasedWhenClosed = false
+            identityWindow = window
+        }
+        // A menu-bar app may have no visible windows after Settings closes.
+        // Include offscreen windows so its application remains discoverable for
+        // exclusion; otherwise capture cannot start until Settings is reopened.
+        return try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: false)
+    }
+
     func invalidate() {
         generation += 1
         output?.deactivate()
@@ -73,6 +90,7 @@ final class ScreenCaptureService: ScreenCapturing {
             catch { /* A stream already stopped by the system needs no further teardown. */ }
         }
         stream = nil; output = nil
+        identityWindow?.close(); identityWindow = nil
     }
 }
 

@@ -35,6 +35,8 @@ open build/Build/Products/Debug/DuoFX.app
 
 Use **Pause all effects** in the menu at any time. Settings stays above the overlay and the overlay never accepts mouse or keyboard focus. Escape pauses when DuoFX receives the key event; global Escape can be unavailable without macOS input permission. DuoFX does not request that extra permission. The menu remains accessible.
 
+Closing Settings with the red close button leaves DuoFX enabled. Capture discovery includes offscreen windows and retains an invisible discovery window while capturing, so the blur can start from the menu bar even before Settings has ever opened.
+
 ### Permission enabled but capture still denied
 
 Older DuoFX builds used ad-hoc signatures, which changed the application's identity on rebuild. macOS may retain an enabled switch for the previous identity while denying the replacement. The current project uses certificate signing to keep its identity stable across builds. [Apple confirms this signing behavior](https://developer.apple.com/forums/thread/819406).
@@ -66,6 +68,12 @@ Tests cover mapping boundaries, smoothing/velocity, hysteresis, blur coverage, r
 To render open, half-closed, and closed snapshots of the bundled fixture, run `DUOFX_PREVIEW_SNAPSHOTS=/tmp/duofx-preview swift test --filter RenderingTests`. Only the bundled test image is saved; captured desktop content is never used by these tests.
 
 To additionally probe the physical lid sensor, run `DUOFX_HARDWARE_TESTS=1 swift test --filter HardwareTests`. This samples the sensor briefly without moving the lid, requesting capture permission, or showing an overlay. It reports an explicit skip for unsupported hardware.
+
+To check capture discovery with Settings closed, leave the installed DuoFX running with its effect paused and Settings closed, then run `DUOFX_CAPTURE_TESTS=1 swift test --filter HardwareTests/testCaptureDiscoveryIncludesDuoFXWithSettingsClosed`. This requires existing Screen Recording access for the test runner, queries app/window metadata without recording frames, and verifies DuoFX can still be excluded from capture without a visible window.
+
+`DUOFX_CAPTURE_TESTS=1 swift test --filter HardwareTests/testCaptureDiscoveryBeforeAnySettingsWindowExists` checks discovery from a fresh process, verifies its discovery window stays offscreen, and confirms stopping capture releases that window.
+
+`DUOFX_CAPTURE_TESTS=1 swift test --filter HardwareTests/testLiveCaptureStartsWithoutVisibleSettings` additionally starts real desktop capture without a visible window and checks that a frame arrives. Frames are discarded immediately without being saved or displayed.
 
 On the development Mac (`Mac16,8`), the hardware probe successfully read 14 samples at 112°. This device advertises a one-byte maximum feature report despite returning a longer valid report; the reader treats the descriptor size as diagnostic information and validates the actual response. This confirms sensor discovery and reading on that machine, but does not replace the lid-motion checks below.
 

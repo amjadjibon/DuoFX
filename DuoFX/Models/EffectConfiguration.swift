@@ -36,10 +36,13 @@ public struct EffectConfiguration: Codable, Equatable, Sendable {
     public var edgeSoftness = 0.12
     public var blurStrength = 12.0
     public var shadowStrength = 0.4
+    public var soundEnabled = false
+    public var soundVolume = 0.35
     public init() {}
 
     private enum CodingKeys: String, CodingKey {
         case style, workingAngle, minimumAngle, edgeSoftness, blurStrength, shadowStrength
+        case soundEnabled, soundVolume
     }
 
     public init(from decoder: Decoder) throws {
@@ -52,6 +55,8 @@ public struct EffectConfiguration: Codable, Equatable, Sendable {
         edgeSoftness = try values.decodeIfPresent(Double.self, forKey: .edgeSoftness) ?? 0.12
         blurStrength = try values.decodeIfPresent(Double.self, forKey: .blurStrength) ?? 12
         shadowStrength = try values.decodeIfPresent(Double.self, forKey: .shadowStrength) ?? 0.4
+        soundEnabled = try values.decodeIfPresent(Bool.self, forKey: .soundEnabled) ?? false
+        soundVolume = try values.decodeIfPresent(Double.self, forKey: .soundVolume) ?? 0.35
     }
 
     public func validated() -> Self {
@@ -61,6 +66,7 @@ public struct EffectConfiguration: Codable, Equatable, Sendable {
         copy.edgeSoftness = clamp(edgeSoftness, 0.02...0.3, fallback: 0.12)
         copy.blurStrength = clamp(blurStrength, 0...30, fallback: 12)
         copy.shadowStrength = clamp(shadowStrength, 0...1, fallback: 0.4)
+        copy.soundVolume = clamp(soundVolume, 0...1, fallback: 0.35)
         return copy
     }
 

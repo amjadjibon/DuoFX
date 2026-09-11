@@ -7,6 +7,7 @@ import DuoFXCore
 
 struct SettingsView: View {
     @Bindable var model: AppModel
+    var previewSound: (LidSound) -> Void
     @State private var previewError: String?
 
     private var previewProgress: Float {
@@ -38,7 +39,7 @@ struct SettingsView: View {
             }
             Divider()
             HStack {
-                Label(model.isCapturing ? "Capturing · no audio · never saved" : "Screen capture stopped",
+                Label(model.isCapturing ? "Capturing screen only · never saved" : "Screen capture stopped",
                       systemImage: model.isCapturing ? "record.circle" : "lock.shield")
                     .font(.caption).foregroundStyle(.secondary)
                 Spacer()
@@ -93,6 +94,16 @@ struct SettingsView: View {
                     Text("Live desktop").tag(DesktopSource.liveDesktop)
                 }
                 Text("Enable the effect, then lower the preview angle or move the lid below your working angle. The overlay appears only on the built-in display.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+            Section("Sound effects") {
+                Toggle("Play whoosh with the blur", isOn: $model.configuration.soundEnabled)
+                parameter("Sound volume", value: $model.configuration.soundVolume, range: 0...1)
+                HStack {
+                    Button("Preview opening") { previewSound(.opening) }
+                    Button("Preview closing") { previewSound(.closing) }
+                }.disabled(model.configuration.soundVolume == 0)
+                Text("A soft whoosh follows each opening or closing sweep. Sounds work with Settings closed and stop when you pause the effect.")
                     .font(.caption).foregroundStyle(.secondary)
             }
             Section("Calibration") {

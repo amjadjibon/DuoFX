@@ -37,6 +37,10 @@ Use **Pause all effects** in the menu at any time. Settings stays above the over
 
 Closing Settings with the red close button leaves DuoFX enabled. Capture discovery includes offscreen windows and retains an invisible discovery window while capturing, so the blur can start from the menu bar even before Settings has ever opened.
 
+Optional **Sound effects** add a soft whoosh for opening and closing. Turn them on in the menu bar or **Settings → Controls → Sound effects**, adjust **Sound volume**, and use **Preview opening / Preview closing** to listen even while the effect is paused. Sound is off by default. Each sweep direction plays once, with movement thresholds to avoid chatter from the lid sensor. Muting, pausing, sleep, and quitting stop playback. Playback uses the Mac’s audio output and does not change system volume or record audio.
+
+The original whoosh assets are bundled with the app and can be regenerated with `python3 scripts/generate-sounds.py`.
+
 ### Permission enabled but capture still denied
 
 Older DuoFX builds used ad-hoc signatures, which changed the application's identity on rebuild. macOS may retain an enabled switch for the previous identity while denying the replacement. The current project uses certificate signing to keep its identity stable across builds. [Apple confirms this signing behavior](https://developer.apple.com/forums/thread/819406).

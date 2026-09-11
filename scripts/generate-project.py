@@ -31,11 +31,11 @@ def reference_in_folder(path, reference):
 
 
 for path in sorted((root / "DuoFX").rglob("*")) + [root / "NOTICE", root / "Licenses/LidAngleSensor.txt"]:
-    if path.suffix not in (".swift", ".metal", ".png", ".txt", ".icns", ".plist") and path.name != "NOTICE":
+    if path.suffix not in (".swift", ".metal", ".png", ".txt", ".icns", ".plist", ".wav") and path.name != "NOTICE":
         continue
     rel = path.relative_to(root).as_posix()
     kind = {".swift": "sourcecode.swift", ".metal": "text", ".png": "image.png",
-            ".icns": "image.icns", ".plist": "text.plist.xml"}.get(path.suffix, "text")
+            ".icns": "image.icns", ".plist": "text.plist.xml", ".wav": "audio.wav"}.get(path.suffix, "text")
     ref = add(rel, f'isa = PBXFileReference; lastKnownFileType = {kind}; path = {json.dumps(rel)}; sourceTree = SOURCE_ROOT;')
     reference_in_folder(path, ref)
     if path.name == "Info.plist":

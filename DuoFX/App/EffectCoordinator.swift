@@ -11,6 +11,8 @@ final class EffectCoordinator {
     private let sensor = HIDAngleSensor()
     private let capture: any ScreenCapturing
     private let overlay: any OverlayPresenting
+    private let sound: any EffectSoundPlaying
+    private var soundTrigger = LidSoundTrigger()
     private let screenProvider: @MainActor () -> NSScreen?
     private var renderer: MetalRenderer?
     private var timer: Timer?
@@ -37,9 +39,11 @@ final class EffectCoordinator {
 
     init(model: AppModel, capture: (any ScreenCapturing)? = nil,
          overlay: (any OverlayPresenting)? = nil,
+         sound: (any EffectSoundPlaying)? = nil,
          screenProvider: @escaping @MainActor () -> NSScreen? = OverlayWindowController.builtInScreen) {
         self.model = model; self.capture = capture ?? ScreenCaptureService()
         self.overlay = overlay ?? OverlayWindowController()
+        self.sound = sound ?? EffectSoundPlayer()
         self.screenProvider = screenProvider
     }
 
@@ -71,6 +75,10 @@ final class EffectCoordinator {
 
     func pause() { model.isEnabled = false; refresh() }
 
+    func previewSound(_ cue: LidSound) {
+        sound.play(cue, volume: model.configuration.validated().soundVolume)
+    }
+
     private func observeSettings() {
         withObservationTracking {
             _ = model.isEnabled; _ = model.configuration; _ = model.angleSource
@@ -86,8 +94,13 @@ final class EffectCoordinator {
     private func refresh() {
         guard !shuttingDown else { return }
         let active = model.isEnabled && suspensions.isEmpty
+        sound.setVolume(model.configuration.validated().soundVolume)
+        if !active || !model.configuration.soundEnabled {
+            sound.stop(); soundTrigger = LidSoundTrigger()
+        }
         manual.angle = model.manualAngle
         if !active || source != model.angleSource {
+            sound.stop(); soundTrigger = LidSoundTrigger()
             manual.stop(); sensor.stop(); sensorRunning = false; source = nil
             timer?.invalidate(); timer = nil
             smoother = AngleSmoother(); gate = VisibilityGate()
@@ -118,6 +131,13 @@ final class EffectCoordinator {
         model.currentAngle = angle; model.velocity = smoother.velocity
         model.progress = closingProgress(angle: angle, workingAngle: c.workingAngle, minimumAngle: c.minimumAngle)
         renderer?.configuration = c; renderer?.progress = model.progress
+        if hasFrame && c.soundEnabled && c.soundVolume > 0 {
+            if let cue = soundTrigger.update(progress: Double(model.progress), at: ProcessInfo.processInfo.systemUptime) {
+                sound.play(cue, volume: c.soundVolume)
+            }
+        } else {
+            soundTrigger = LidSoundTrigger()
+        }
         guard gate.update(angle: angle, workingAngle: c.workingAngle) else {
             setTarget(nil)
             let triggerAngle = Int((c.workingAngle - 2).rounded(.down))
@@ -138,6 +158,7 @@ final class EffectCoordinator {
     private func setTarget(_ next: OutputTarget?) {
         guard next != target else { return }
         target = next; revision += 1
+        sound.stop(); soundTrigger = LidSoundTrigger()
         // Hide synchronously. A pending permission dialog/start must never reopen it.
         capture.invalidate()
         overlay.hide(); renderer?.clear(); hasFrame = false
@@ -268,6 +289,7 @@ final class EffectCoordinator {
 
     func shutdown() async {
         shuttingDown = true; model.isEnabled = false
+        sound.stop(); soundTrigger = LidSoundTrigger()
         timer?.invalidate(); timer = nil; manual.stop(); sensor.stop()
         firstFrameTask?.cancel(); firstFrameTask = nil
         for (center, observer) in observers { center.removeObserver(observer) }

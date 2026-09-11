@@ -7,7 +7,7 @@ import XCTest
 
 @MainActor
 final class LifecycleTests: XCTestCase {
-    private func fixture() throws -> (AppModel, DelayedCapture, RecordingOverlay, EffectCoordinator, String) {
+    private func fixture(sound: (any EffectSoundPlaying)? = nil) throws -> (AppModel, DelayedCapture, RecordingOverlay, EffectCoordinator, String) {
         guard MTLCreateSystemDefaultDevice() != nil, let screen = NSScreen.screens.first else {
             throw XCTSkip("A display and Metal are required for coordinator integration tests")
         }
@@ -17,7 +17,7 @@ final class LifecycleTests: XCTestCase {
         model.desktopSource = .liveDesktop; model.manualAngle = 60; model.isEnabled = true
         let capture = DelayedCapture()
         let overlay = RecordingOverlay()
-        let coordinator = EffectCoordinator(model: model, capture: capture, overlay: overlay, screenProvider: { screen })
+        let coordinator = EffectCoordinator(model: model, capture: capture, overlay: overlay, sound: sound, screenProvider: { screen })
         return (model, capture, overlay, coordinator, suite)
     }
 
@@ -112,6 +112,31 @@ final class LifecycleTests: XCTestCase {
         XCTAssertEqual(overlay.showCount, 0)
     }
 
+    func testSoundFollowsMovementAndStopsOnMuteSleepPauseAndQuit() async throws {
+        let sound = RecordingSound()
+        let (model, _, overlay, coordinator, suite) = try fixture(sound: sound)
+        defer { UserDefaults.standard.removePersistentDomain(forName: suite) }
+        model.desktopSource = .testImage
+        model.configuration.soundEnabled = true
+        coordinator.start()
+        await waitUntil { overlay.showCount == 1 && abs(model.velocity) < 0.1 }
+        XCTAssertTrue(sound.cues.isEmpty, "Enabling at a stationary angle must stay silent")
+        model.manualAngle = 30
+        await waitUntil { sound.cues == [.closing] }
+        model.configuration.soundEnabled = false
+        await waitUntil { !sound.isPlaying }
+        coordinator.previewSound(.opening)
+        NSWorkspace.shared.notificationCenter.post(name: NSWorkspace.willSleepNotification, object: nil)
+        XCTAssertFalse(sound.isPlaying)
+        NSWorkspace.shared.notificationCenter.post(name: NSWorkspace.didWakeNotification, object: nil)
+        coordinator.previewSound(.closing)
+        coordinator.pause()
+        XCTAssertFalse(sound.isPlaying)
+        coordinator.previewSound(.opening)
+        await coordinator.shutdown()
+        XCTAssertFalse(sound.isPlaying)
+    }
+
     private func waitUntil(_ condition: () -> Bool, file: StaticString = #filePath, line: UInt = #line) async {
         for _ in 0..<200 {
             if condition() { return }
@@ -119,6 +144,15 @@ final class LifecycleTests: XCTestCase {
         }
         XCTFail("Timed out waiting for lifecycle transition", file: file, line: line)
     }
+}
+
+@MainActor
+private final class RecordingSound: EffectSoundPlaying {
+    var cues: [LidSound] = []
+    var isPlaying = false
+    func play(_ cue: LidSound, volume: Double) { cues.append(cue); isPlaying = true }
+    func setVolume(_ volume: Double) {}
+    func stop() { isPlaying = false }
 }
 
 @MainActor

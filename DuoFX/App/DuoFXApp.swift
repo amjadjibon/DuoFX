@@ -41,8 +41,6 @@ private struct MenuView: View {
     @Bindable var model: AppModel
     let coordinator: EffectCoordinator
     var body: some View {
-        Text("DuoFX · \(model.status)")
-        Text(model.inputSummary)
         Toggle("Enable effect", isOn: $model.isEnabled)
         Toggle("Sound effects", isOn: $model.configuration.soundEnabled)
         Button("Pause all effects") { coordinator.pause() }

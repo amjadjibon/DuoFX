@@ -27,8 +27,8 @@ bash scripts/build.sh
 open build/Build/Products/Debug/DuoFX.app
 ```
 
-1. Click **Enable effect** in the menu. New installations use **Lid sensor + Live desktop**; the active input and content are shown in the menu and Settings.
-2. Close the lid below the angle shown by the Ready status (93° with the default calibration). The effect is intentionally hidden above that threshold. In **Settings → Setup**, use **Use current lid angle** to calibrate to your normal lid position.
+1. Click **Enable effect** in the menu. New installations use **Lid sensor + Live desktop**; the active input and content are shown in **Settings → Setup**.
+2. Close the lid below the angle shown by the Ready status in Settings (93° with the default calibration). The effect is intentionally hidden above that threshold. In **Settings → Setup**, use **Use current lid angle** to calibrate to your normal lid position.
 3. Allow Screen Recording when macOS requests it. If macOS requires a restart after granting access, quit and reopen DuoFX, then enable it again.
 4. **Setup → Diagnostics & recovery** reports sensor discovery, angle readings, unsupported reports, and read failures. Select **Setup → Input → Lid sensor** to follow physical movement; explicit selections are preserved on relaunch.
 5. Try the bundled desktop using **Play demo**, the preview scrubber, or **Open / Halfway / Closed**. These controls change only the in-window preview and need no permission. **Follow lid** mirrors the actual effect when enabled with Lid sensor selected. To put the sample over the whole screen, select **Setup → Manual control + Sample desktop**, enable the effect, and lower **Desktop angle**.

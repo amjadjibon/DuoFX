@@ -26,17 +26,26 @@ public struct AngleSmoother {
     public init() {}
 
     @discardableResult
-    public mutating func update(_ raw: Double, at time: TimeInterval) -> Double {
+    public mutating func update(_ raw: Double, at time: TimeInterval, response: Double = 0.20) -> Double {
         guard raw.isFinite, time.isFinite else { return angle ?? 95 }
         guard let previous = angle, let last = timestamp, time > last, time - last < 1 else {
             angle = raw; timestamp = time; velocity = 0
             return raw
         }
-        // Equivalent to alpha 0.18 at 60 Hz, independent of callback frequency.
+        // Exact critically damped response: continuous velocity at starts and
+        // reversals, independent of whether the display runs at 60 or 120 Hz.
         let dt = time - last
-        let alpha = 1 - pow(1 - 0.18, dt * 60)
-        let next = previous + (raw - previous) * alpha
-        velocity = (next - previous) / dt
+        let duration = min(max(response.isFinite ? response : 0.20, 0.08), 0.4)
+        let omega = 2 / duration
+        let offset = previous - raw
+        let term = velocity + omega * offset
+        let decay = exp(-omega * dt)
+        var next = raw + (offset + term * dt) * decay
+        velocity = (velocity - omega * term * dt) * decay
+        // Momentum must never carry the blur beyond its target after reversal.
+        if (raw - previous) * (next - raw) > 0 {
+            next = raw; velocity = 0
+        }
         angle = next; timestamp = time
         return next
     }

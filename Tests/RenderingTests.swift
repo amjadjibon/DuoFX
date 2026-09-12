@@ -90,6 +90,7 @@ private final class RenderFixture {
         renderer = try MetalRenderer(device: device)
         renderer.isOverlay = false
         renderer.configuration.shadowStrength = 0
+        renderer.configuration.edgeSoftness = 0.12
         queue = try XCTUnwrap(device.makeCommandQueue())
         if useBundledImage {
             let url = try XCTUnwrap(AppResources.bundle.url(forResource: "Preview", withExtension: "png"))

@@ -50,7 +50,7 @@ final class SoundTests: XCTestCase {
         configuration.soundVolume = -1
         XCTAssertEqual(configuration.validated().soundVolume, 0)
         configuration.soundVolume = .nan
-        XCTAssertEqual(configuration.validated().soundVolume, 0.35)
+        XCTAssertEqual(configuration.validated().soundVolume, 0.25)
         configuration.soundVolume = 0.6; configuration.soundEnabled = true
         configuration.apply(.silk)
         XCTAssertTrue(configuration.soundEnabled)

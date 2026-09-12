@@ -30,10 +30,26 @@ final class BlurSweepTests: XCTestCase {
         c.workingAngle = 70; c.minimumAngle = 100; c.blurStrength = .nan; c.edgeSoftness = 0
         let valid = c.validated()
         XCTAssertEqual(valid.minimumAngle, 65)
-        XCTAssertEqual(valid.blurStrength, 12)
+        XCTAssertEqual(valid.blurStrength, 18)
         XCTAssertEqual(valid.edgeSoftness, 0.02)
         c.apply(.silk)
         XCTAssertEqual(c.workingAngle, 70)
         XCTAssertEqual(c.edgeSoftness, EffectStyle.silk.preset.edgeSoftness)
+    }
+
+    func testRecommendedPresetKeepsCalibrationAndSoundChoice() {
+        var c = EffectConfiguration()
+        c.workingAngle = 115; c.minimumAngle = 30; c.soundEnabled = true
+        c.blurStrength = 2; c.motionResponse = 0.08
+        c.applyRecommended()
+        XCTAssertEqual(c.style, .frost)
+        XCTAssertEqual(c.blurStrength, 18)
+        XCTAssertEqual(c.edgeSoftness, 0.22)
+        XCTAssertEqual(c.shadowStrength, 0.18)
+        XCTAssertEqual(c.motionResponse, 0.20)
+        XCTAssertEqual(c.soundVolume, 0.25)
+        XCTAssertEqual(c.workingAngle, 115)
+        XCTAssertEqual(c.minimumAngle, 30)
+        XCTAssertTrue(c.soundEnabled)
     }
 }

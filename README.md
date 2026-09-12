@@ -41,6 +41,10 @@ Optional **Sound effects** add a soft whoosh for opening and closing. Turn them 
 
 The original whoosh assets are bundled with the app and can be regenerated with `python3 scripts/generate-sounds.py`.
 
+For a gentle sweep, use **Settings → Effect → Recommended · Cinematic Frost**: 18 px blur, 0.22 edge softness, 0.18 dimming, 0.20 s motion easing, and 25% sound volume. The preset preserves your working/minimum lid angles and whether sound is enabled. Dimming is scaled by the shader, so this setting darkens the fully blurred region by about 6%. The easing value controls response rather than a fixed animation duration; the sweep settles about 95% of the way to a new lid angle in 0.47 seconds. Increase **Motion easing** for a slower feel or reduce it for a quicker response.
+
+Visible animation follows Metal's display refresh callbacks, requesting up to 120 FPS on supported displays. Sensor/capture sampling remains at 60 Hz; intermediate animation frames use continuous easing. A timer keeps lid detection running when the overlay is hidden or drawing stops. The desktop stays fixed as the blur boundary moves.
+
 ### Permission enabled but capture still denied
 
 Older DuoFX builds used ad-hoc signatures, which changed the application's identity on rebuild. macOS may retain an enabled switch for the previous identity while denying the replacement. The current project uses certificate signing to keep its identity stable across builds. [Apple confirms this signing behavior](https://developer.apple.com/forums/thread/819406).
@@ -70,6 +74,8 @@ xcodebuild -project DuoFX.xcodeproj -scheme DuoFX \
 Tests cover mapping boundaries, smoothing/velocity, hysteresis, blur coverage, report decoding, presets, settings migration, persistence, manual-provider lifecycle, and capture startup/pause/source-switch/failure/sleep/quit races using a controlled capture provider. Offscreen Metal tests compile the actual shader and verify that desktop pixels never move, that only the covered region blurs, and that the uncovered overlay is transparent. They also check full blur coverage at the minimum angle and correct reversal when opening. These tests do not request Screen Recording permission or display a full-screen overlay. GPU/display-dependent tests explicitly skip if their hardware is absent.
 
 To render open, half-closed, and closed snapshots of the bundled fixture, run `DUOFX_PREVIEW_SNAPSHOTS=/tmp/duofx-preview swift test --filter RenderingTests`. Only the bundled test image is saved; captured desktop content is never used by these tests.
+
+`DUOFX_RENDER_BENCHMARK=1 swift test --filter RenderingPerformanceTests` reports GPU p50/p95/p99 times for a synthetic 3024×1964 frame at blur radii 0, 12, and 18. This measures rendering cost, not achieved onscreen FPS or capture latency.
 
 To additionally probe the physical lid sensor, run `DUOFX_HARDWARE_TESTS=1 swift test --filter HardwareTests`. This samples the sensor briefly without moving the lid, requesting capture permission, or showing an overlay. It reports an explicit skip for unsupported hardware.
 

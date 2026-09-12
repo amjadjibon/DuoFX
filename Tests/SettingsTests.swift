@@ -15,6 +15,7 @@ final class SettingsTests: XCTestCase {
         XCTAssertFalse(first.configuration.soundEnabled)
         first.configuration.soundEnabled = true
         first.configuration.soundVolume = 0.65
+        first.configuration.motionResponse = 0.28
         first.configuration.apply(.shade)
         first.angleSource = .sensor; first.desktopSource = .liveDesktop
         first.isEnabled = true
@@ -22,6 +23,7 @@ final class SettingsTests: XCTestCase {
         XCTAssertEqual(second.configuration.workingAngle, 110)
         XCTAssertTrue(second.configuration.soundEnabled)
         XCTAssertEqual(second.configuration.soundVolume, 0.65)
+        XCTAssertEqual(second.configuration.motionResponse, 0.28)
         XCTAssertEqual(second.configuration.style, .shade)
         XCTAssertEqual(second.angleSource, .sensor)
         XCTAssertEqual(second.desktopSource, .liveDesktop)
@@ -54,9 +56,10 @@ final class SettingsTests: XCTestCase {
         XCTAssertEqual(model.configuration.minimumAngle, 30)
         XCTAssertEqual(model.configuration.blurStrength, 18)
         XCTAssertEqual(model.configuration.shadowStrength, 0.3)
-        XCTAssertEqual(model.configuration.edgeSoftness, 0.12)
+        XCTAssertEqual(model.configuration.edgeSoftness, 0.22)
         XCTAssertFalse(model.configuration.soundEnabled)
-        XCTAssertEqual(model.configuration.soundVolume, 0.35)
+        XCTAssertEqual(model.configuration.soundVolume, 0.25)
+        XCTAssertEqual(model.configuration.motionResponse, 0.20)
         model.configuration.edgeSoftness = 0.2
         XCTAssertEqual(AppModel(defaults: defaults).configuration.edgeSoftness, 0.2)
     }

@@ -16,6 +16,7 @@ final class EffectCoordinator {
     private let screenProvider: @MainActor () -> NSScreen?
     private var renderer: MetalRenderer?
     private var timer: Timer?
+    private var lastDrawTime = -Double.infinity
     private var observers: [(NotificationCenter, NSObjectProtocol)] = []
     private var localEscape: Any?
     private var globalEscape: Any?
@@ -117,7 +118,14 @@ final class EffectCoordinator {
             if source == .manual { manual.start() }
             else { model.status = "Checking lid sensor…"; sensor.start() }
             let timer = Timer(timeInterval: 1.0 / 60, repeats: true) { [weak self] _ in
-                MainActor.assumeIsolated { self?.tick() }
+                MainActor.assumeIsolated {
+                    guard let self else { return }
+                    // The display drives visible animation. Keep polling while
+                    // hidden or if drawing stops, so lid/sleep recovery still works.
+                    if !self.hasFrame || ProcessInfo.processInfo.systemUptime - self.lastDrawTime > 0.05 {
+                        self.tick()
+                    }
+                }
             }
             RunLoop.main.add(timer, forMode: .common); self.timer = timer
         }
@@ -127,7 +135,7 @@ final class EffectCoordinator {
     private func tick() {
         guard model.isEnabled, suspensions.isEmpty, !shuttingDown else { return }
         let c = model.configuration.validated()
-        let angle = smoother.update(rawAngle, at: ProcessInfo.processInfo.systemUptime)
+        let angle = smoother.update(rawAngle, at: ProcessInfo.processInfo.systemUptime, response: c.motionResponse)
         model.currentAngle = angle; model.velocity = smoother.velocity
         model.progress = closingProgress(angle: angle, workingAngle: c.workingAngle, minimumAngle: c.minimumAngle)
         renderer?.configuration = c; renderer?.progress = model.progress
@@ -181,6 +189,13 @@ final class EffectCoordinator {
             do {
                 if renderer == nil { renderer = try MetalRenderer() }
                 guard let renderer else { throw RendererError.unavailable }
+                renderer.onWillDraw = { [weak self] in
+                    MainActor.assumeIsolated {
+                        guard let self else { return }
+                        self.lastDrawTime = ProcessInfo.processInfo.systemUptime
+                        self.tick()
+                    }
+                }
                 renderer.configuration = model.configuration.validated(); renderer.progress = model.progress
                 renderer.onFailure = { [weak self] error in
                     Task { @MainActor in

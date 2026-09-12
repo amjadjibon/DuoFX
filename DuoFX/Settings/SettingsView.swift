@@ -67,6 +67,7 @@ struct SettingsView: View {
                     .accessibilityLabel("Downward blur effect preview")
             }
             Form {
+                Button("Recommended · Cinematic Frost") { model.configuration.applyRecommended() }
                 Picker("Style", selection: Binding(get: { model.configuration.style },
                                                    set: { model.configuration.apply($0) })) {
                     ForEach(EffectStyle.allCases) { Text($0.rawValue.capitalized).tag($0) }
@@ -76,6 +77,9 @@ struct SettingsView: View {
                 parameter("Blur", value: $model.configuration.blurStrength, range: 0...30, suffix: " px")
                 parameter("Edge softness", value: $model.configuration.edgeSoftness, range: 0.02...0.3)
                 parameter("Dim blurred area", value: $model.configuration.shadowStrength, range: 0...1)
+                parameter("Motion easing", value: $model.configuration.motionResponse, range: 0.08...0.4, suffix: " s")
+                Text("Higher motion easing gives the sweep a slower, softer start and stop.")
+                    .font(.caption).foregroundStyle(.secondary)
                 Text("Blur moves down as you close the lid. Your desktop stays in place.")
                     .font(.caption).foregroundStyle(.secondary)
             }.formStyle(.grouped)

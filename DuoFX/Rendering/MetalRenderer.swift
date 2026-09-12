@@ -55,6 +55,7 @@ final class MetalRenderer: NSObject, MTKViewDelegate, @unchecked Sendable {
     var progress: Float = 0
     var isOverlay = true
     var onFailure: (@Sendable (Error) -> Void)?
+    var onWillDraw: (() -> Void)?
 
     init(device: MTLDevice? = MTLCreateSystemDefaultDevice()) throws {
         guard let device, let queue = device.makeCommandQueue() else { throw RendererError.unavailable }
@@ -107,6 +108,7 @@ final class MetalRenderer: NSObject, MTKViewDelegate, @unchecked Sendable {
     func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {}
 
     func draw(in view: MTKView) {
+        onWillDraw?()
         guard inFlight.wait(timeout: .now()) == .success else { return }
         frameLock.lock(); let frame = latestFrame; frameLock.unlock()
         guard let frame, let drawable = view.currentDrawable,

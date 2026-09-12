@@ -36,7 +36,8 @@ final class OverlayWindowController: OverlayPresenting {
         view.wantsLayer = true; view.layer?.isOpaque = false
         view.colorPixelFormat = .bgra8Unorm
         view.clearColor = MTLClearColorMake(0, 0, 0, 0)
-        view.preferredFramesPerSecond = 60; view.framebufferOnly = true
+        view.preferredFramesPerSecond = min(max(screen.maximumFramesPerSecond, 60), 120)
+        view.framebufferOnly = true
         view.isPaused = false; view.enableSetNeedsDisplay = false
         view.autoresizingMask = [.width, .height]; view.delegate = renderer
         panel.contentView = view

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Create an original deterministic PNG fixture with orientation and seam markers."""
+"""Create a technical orientation fixture without replacing the bundled desktop art."""
 from pathlib import Path
 import math
 import struct
@@ -39,6 +39,6 @@ def chunk(kind, data):
 
 png = b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, 6, 0, 0, 0))
 png += chunk(b"IDAT", zlib.compress(rows, 9)) + chunk(b"IEND", b"")
-out = Path(__file__).resolve().parent.parent / "DuoFX/Resources/Preview.png"
+out = Path(__file__).resolve().parent.parent / "build/fixtures/Orientation.png"
 out.parent.mkdir(parents=True, exist_ok=True)
 out.write_bytes(png)

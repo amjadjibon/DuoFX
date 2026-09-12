@@ -28,20 +28,20 @@ open build/Build/Products/Debug/DuoFX.app
 ```
 
 1. Click **Enable effect** in the menu. New installations use **Lid sensor + Live desktop**; the active input and content are shown in the menu and Settings.
-2. Close the lid below the angle shown by the Ready status (93° with the default calibration). The effect is intentionally hidden above that threshold. In **Settings → Controls**, use **Use current angle as working angle** to calibrate to your normal lid position.
+2. Close the lid below the angle shown by the Ready status (93° with the default calibration). The effect is intentionally hidden above that threshold. In **Settings → Setup**, use **Use current lid angle** to calibrate to your normal lid position.
 3. Allow Screen Recording when macOS requests it. If macOS requires a restart after granting access, quit and reopen DuoFX, then enable it again.
-4. **Diagnostics** reports sensor discovery, angle readings, unsupported reports, and read failures. If you previously selected **Manual preview**, switch **Controls → Angle control** to **Lid sensor** to follow physical movement; explicit selections are preserved on relaunch.
-5. For permission-free testing, keep the effect paused and move **Preview angle** in Settings. To show this preview over the screen, choose **Manual preview + Bundled image** in Controls, enable the effect, and lower the preview angle.
+4. **Setup → Diagnostics & recovery** reports sensor discovery, angle readings, unsupported reports, and read failures. Select **Setup → Input → Lid sensor** to follow physical movement; explicit selections are preserved on relaunch.
+5. Try the bundled desktop using **Play demo**, the preview scrubber, or **Open / Halfway / Closed**. These controls change only the in-window preview and need no permission. **Follow lid** mirrors the actual effect when enabled with Lid sensor selected. To put the sample over the whole screen, select **Setup → Manual control + Sample desktop**, enable the effect, and lower **Desktop angle**.
 
 Use **Pause all effects** in the menu at any time. Settings stays above the overlay and the overlay never accepts mouse or keyboard focus. Escape pauses when DuoFX receives the key event; global Escape can be unavailable without macOS input permission. DuoFX does not request that extra permission. The menu remains accessible.
 
 Closing Settings with the red close button leaves DuoFX enabled. Capture discovery includes offscreen windows and retains an invisible discovery window while capturing, so the blur can start from the menu bar even before Settings has ever opened.
 
-Optional **Sound effects** add a soft whoosh for opening and closing. Turn them on in the menu bar or **Settings → Controls → Sound effects**, adjust **Sound volume**, and use **Preview opening / Preview closing** to listen even while the effect is paused. Sound is off by default. Each sweep direction plays once, with movement thresholds to avoid chatter from the lid sensor. Muting, pausing, sleep, and quitting stop playback. Playback uses the Mac’s audio output and does not change system volume or record audio.
+Optional **Sound effects** add a soft whoosh for opening and closing. Turn them on in the menu bar or **Settings → Sound**, adjust **Volume**, and use **Opening / Closing** to listen even while the effect is paused. Sound is off by default. Each sweep direction plays once, with movement thresholds to avoid chatter from the lid sensor. Muting, pausing, sleep, and quitting stop playback. Playback uses the Mac’s audio output and does not change system volume or record audio.
 
 The original whoosh assets are bundled with the app and can be regenerated with `python3 scripts/generate-sounds.py`.
 
-For a gentle sweep, use **Settings → Effect → Recommended · Cinematic Frost**: 18 px blur, 0.22 edge softness, 0.18 dimming, 0.20 s motion easing, and 25% sound volume. The preset preserves your working/minimum lid angles and whether sound is enabled. Dimming is scaled by the shader, so this setting darkens the fully blurred region by about 6%. The easing value controls response rather than a fixed animation duration; the sweep settles about 95% of the way to a new lid angle in 0.47 seconds. Increase **Motion easing** for a slower feel or reduce it for a quicker response.
+For a gentle sweep, use **Settings → Effect → Use recommended settings**: 18 px blur, 0.22 edge softness, 0.18 dimming, 0.20 s motion easing, and 25% sound volume. The preset preserves your working/minimum lid angles and whether sound is enabled. Dimming is scaled by the shader, so this setting darkens the fully blurred region by about 6%. The easing value controls response rather than a fixed animation duration; the sweep settles about 95% of the way to a new lid angle in 0.47 seconds. Increase **Motion easing** for a slower feel or reduce it for a quicker response.
 
 Visible animation follows Metal's display refresh callbacks, requesting up to 120 FPS on supported displays. Sensor/capture sampling remains at 60 Hz; intermediate animation frames use continuous easing. A timer keeps lid detection running when the overlay is hidden or drawing stops. The desktop stays fixed as the blur boundary moves.
 
@@ -104,7 +104,7 @@ The automated suite does not establish physical lid tracking, actual Screen Reco
 
 Metal source is bundled and compiled once per renderer with `makeLibrary`, so a separate Metal command-line toolchain download is not required. Rendering pipelines, meshes, and samplers are retained. Blur kernels are rebuilt only when the quantized sigma changes, and the intermediate texture is reused until the source size changes.
 
-After adding source files, regenerate the checked-in Xcode project with `python3 scripts/generate-project.py`. The fixture can be regenerated with `python3 scripts/generate-preview.py`. Neither script needs third-party packages.
+After adding source files, regenerate the checked-in Xcode project with `python3 scripts/generate-project.py`. The technical orientation fixture can be regenerated into `build/fixtures/Orientation.png` with `python3 scripts/generate-preview.py`. This does not overwrite the bundled artwork. Neither script needs third-party packages.
 
 `scripts/generate-icon.sh` regenerates the bundled `.icns` app icon using AppKit and `iconutil`. The menu-bar icon is a native template image that adapts to light/dark appearances; both icons share the folding-laptop drawing in `MenuBarIcon.swift`.
 
@@ -119,3 +119,7 @@ For distribution, use your Apple Developer team and Developer ID Application cer
 ## Attribution
 
 HID matching constants and the feature-report reader are adapted from [Sam Gold's LidAngleSensor](https://github.com/samhenrigold/LidAngleSensor), under Apache-2.0. See [NOTICE](NOTICE) and [the original license](Licenses/LidAngleSensor.txt), both included in the app bundle. Other implementation and the bundled preview image are original to DuoFX.
+
+The bundled sample desktop is original generated artwork; its source prompt and provenance are in [docs/preview-art.md](docs/preview-art.md). Settings supports light/dark appearance, keyboard-accessible controls, and Reduce Motion (manual preview changes are immediate and automatic demos are disabled). A settled preview pauses its render loop.
+
+To export offscreen light/dark layout checks at the minimum window size, run `DUOFX_SETTINGS_SNAPSHOTS=/tmp/duofx-settings swift test --filter SettingsLayoutTests`. AppKit bitmap snapshots omit the Metal surface; use the separate rendering snapshots above to verify the actual preview image and blur.

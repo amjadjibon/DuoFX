@@ -14,6 +14,7 @@ final class SettingsLayoutTests: XCTestCase {
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
         let model = AppModel(defaults: defaults)
+        model.configuration.animationMode = .perspective
         for dark in [false, true] {
             let root = SettingsView(model: model, previewSound: { _ in })
                 .environment(\.colorScheme, dark ? .dark : .light)

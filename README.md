@@ -1,6 +1,6 @@
 # DuoFX
 
-A native macOS menu-bar app that sweeps blur down the built-in desktop as a MacBook lid closes. The desktop remains fixed in place. The capture, sensor, and lifecycle architecture comes from [DESIGN.md](DESIGN.md); the original folding projection has been replaced by a blur sweep.
+A native macOS menu-bar app that animates the built-in desktop as a MacBook lid closes. Choose a blur sweep, progressive Soft fold, or an optional perspective tilt. The capture, sensor, and lifecycle architecture comes from [DESIGN.md](DESIGN.md).
 
 Requires **macOS 14 or later, Apple silicon, and Xcode 15 or later**. Build and automated validation were performed with Xcode 26.6. Physical sensor support depends on the Mac's HID interface; manual preview is available independently.
 
@@ -47,7 +47,9 @@ For a gentle sweep, use **Settings → Effect → Use recommended settings**: 18
 
 **Use reference look** selects Soft fold moving top to bottom, with 100% blur intensity (up to a 72-source-pixel sampling radius), 20% soft edge, 70% fold shadow, 24% transition width, no extra dimming, and 0.28 s easing. It preserves lid calibration and sound preferences. **Use recommended settings** returns to the original top-to-bottom Cinematic Frost sweep. Existing saved configurations retain their chosen animation and settings. The adapted sampler's MIT license is bundled as `IPhoneDuoLicense.txt`; phone models and reference media are not included.
 
-Visible animation follows Metal's display refresh callbacks, requesting up to 120 FPS on supported displays. Sensor/capture sampling remains at 60 Hz; intermediate animation frames use continuous easing. A timer keeps lid detection running when the overlay is hidden or drawing stops. The desktop stays fixed as the blur boundary moves.
+**Settings → Effect → Animation → Perspective** tilts the captured desktop toward the destination edge over a black backdrop, while retaining the progressive blur and shadow. Top-to-bottom motion anchors the bottom edge like a laptop hinge. **Perspective strength** adjusts the tilt from 0% (identical to Soft fold) to 100% (up to 75°); the initial strength is 55%. Opening reverses the projection. Use **Play demo** to try it in the sample preview. This is a visual transformation: mouse targets stay at their original desktop positions. Existing installations keep their selected animation until Perspective is chosen.
+
+Visible animation follows Metal's display refresh callbacks, requesting up to 120 FPS on supported displays. Sensor/capture sampling remains at 60 Hz; intermediate animation frames use continuous easing. A timer keeps lid detection running when the overlay is hidden or drawing stops. Blur sweep and Soft fold keep desktop coordinates fixed; Perspective projects the captured image around its hinge.
 
 ### Permission enabled but capture still denied
 
@@ -57,7 +59,7 @@ When upgrading from an old build, quit DuoFX, remove its existing entry from **S
 
 ## Included
 
-- A fixed full-screen Metal quad with MPS Gaussian blur for Blur sweep and a GPU mip pyramid with variable-radius sampling for Soft fold. Both use a soft moving boundary; opening the lid reverses the same path. Settings control blur, edge softness, shading, direction, and motion easing.
+- A full-screen Metal quad with MPS Gaussian blur for Blur sweep and a GPU mip pyramid with variable-radius sampling for Soft fold and Perspective. Perspective uses inverse planar projection with antialiased moving edges. Opening the lid reverses the same path. Settings control blur, edge softness, shading, direction, tilt strength, and motion easing.
 - Silk, Shade, and Frost presets; working/minimum angle calibration; persisted appearance and input choices. Enabling is intentionally not persisted.
 - A deterministic bundled PNG for permission-free development and an embedded Metal preview that only redraws when settings change.
 - Built-in-display-only ScreenCaptureKit capture at up to 60 FPS, BGRA IOSurface textures, complete-frame filtering, no cursor or audio, and exclusion of every DuoFX window.
@@ -65,7 +67,7 @@ When upgrading from an old build, quit DuoFX, remove its existing entry from **S
 - Asynchronous HID discovery/polling on a dedicated queue, Apple vendor/product and usage checks, bounded report decoding, repeated-read failure handling, and explicit device teardown.
 - Time-based angle smoothing, signed velocity, and hysteresis. Capture stops when the overlay becomes hidden, when paused, on sleep/session inactivity/lock, and on quit. Screen configuration changes rebuild the capture target.
 
-All captured content stays on the device in memory. The app has no network, analytics, audio, or frame-saving functionality. The overlay is fully transparent below the blur boundary and samples the blurred desktop at its original coordinates above it. Settings and menu controls remain above the effect, and the real desktop receives mouse events at the same visual positions.
+All captured content stays on the device in memory. The app has no network, analytics, audio recording, or frame-saving functionality. Blur sweep and Soft fold leave the uncovered desktop transparent and preserve desktop coordinates. Perspective covers the original desktop with the tilted capture and a black backdrop. Settings and menu controls remain above all effects; mouse input always passes through to the original desktop positions.
 
 ## Validation
 
@@ -75,11 +77,11 @@ xcodebuild -project DuoFX.xcodeproj -scheme DuoFX \
   -configuration Release -derivedDataPath build build
 ```
 
-Tests cover mapping boundaries, smoothing/velocity, hysteresis, blur coverage, report decoding, presets, settings migration, persistence, manual-provider lifecycle, and capture startup/pause/source-switch/failure/sleep/quit races using a controlled capture provider. Offscreen Metal tests compile the actual shader and verify that desktop pixels never move, that only the covered region blurs, and that the uncovered overlay is transparent. They also check full blur coverage at the minimum angle and correct reversal when opening. These tests do not request Screen Recording permission or display a full-screen overlay. GPU/display-dependent tests explicitly skip if their hardware is absent.
+Tests cover mapping boundaries, smoothing/velocity, hysteresis, blur coverage, report decoding, presets, settings migration, persistence, manual-provider lifecycle, and capture startup/pause/source-switch/failure/sleep/quit races using a controlled capture provider. Offscreen Metal tests compile the actual shader and verify fixed desktop coordinates and transparent uncovered regions for the blur modes, progressive blur/shadow, and opening reversal. Perspective tests check projected content, hinge anchoring in every direction, the opaque backdrop, zero-strength equivalence to Soft fold, and settings persistence. These tests do not request Screen Recording permission or display a full-screen overlay. GPU/display-dependent tests explicitly skip if their hardware is absent.
 
 To render open, half-closed, and closed snapshots of the bundled fixture, run `DUOFX_PREVIEW_SNAPSHOTS=/tmp/duofx-preview swift test --filter RenderingTests`. Only the bundled test image is saved; captured desktop content is never used by these tests.
 
-`DUOFX_RENDER_BENCHMARK=1 swift test --filter RenderingPerformanceTests` reports GPU p50/p95/p99 times for a synthetic 3024×1964 frame at sweep blur radii 0, 12, and 18, plus Soft fold at maximum blur. This measures rendering cost, not achieved onscreen FPS or capture latency.
+`DUOFX_RENDER_BENCHMARK=1 swift test --filter RenderingPerformanceTests` reports GPU p50/p95/p99 times for a synthetic 3024×1964 frame at sweep blur radii 0, 12, and 18, plus Soft fold and Perspective at maximum blur. This measures rendering cost, not achieved onscreen FPS or capture latency.
 
 To additionally probe the physical lid sensor, run `DUOFX_HARDWARE_TESTS=1 swift test --filter HardwareTests`. This samples the sensor briefly without moving the lid, requesting capture permission, or showing an overlay. It reports an explicit skip for unsupported hardware.
 

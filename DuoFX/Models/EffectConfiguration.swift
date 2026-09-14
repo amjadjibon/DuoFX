@@ -63,6 +63,7 @@ public struct EffectConfiguration: Codable, Equatable, Sendable {
     public var foldShadow = 0.55
     public var foldWidth = 0.18
     public var perspectiveStrength = 0.55
+    public var perspectiveFeather = 0.06
     public var soundEnabled = false
     public var soundVolume = 0.25
     public init() {}
@@ -70,7 +71,7 @@ public struct EffectConfiguration: Codable, Equatable, Sendable {
     private enum CodingKeys: String, CodingKey {
         case style, workingAngle, minimumAngle, edgeSoftness, blurStrength, shadowStrength
         case soundEnabled, soundVolume, motionResponse
-        case animationMode, sweepDirection, foldShadow, foldWidth, perspectiveStrength
+        case animationMode, sweepDirection, foldShadow, foldWidth, perspectiveStrength, perspectiveFeather
     }
 
     public init(from decoder: Decoder) throws {
@@ -91,6 +92,7 @@ public struct EffectConfiguration: Codable, Equatable, Sendable {
         foldShadow = try values.decodeIfPresent(Double.self, forKey: .foldShadow) ?? 0.55
         foldWidth = try values.decodeIfPresent(Double.self, forKey: .foldWidth) ?? 0.18
         perspectiveStrength = try values.decodeIfPresent(Double.self, forKey: .perspectiveStrength) ?? 0.55
+        perspectiveFeather = try values.decodeIfPresent(Double.self, forKey: .perspectiveFeather) ?? 0.06
     }
 
     public func validated() -> Self {
@@ -105,6 +107,7 @@ public struct EffectConfiguration: Codable, Equatable, Sendable {
         copy.foldShadow = clamp(foldShadow, 0...1, fallback: 0.55)
         copy.foldWidth = clamp(foldWidth, 0.04...0.35, fallback: 0.18)
         copy.perspectiveStrength = clamp(perspectiveStrength, 0...1, fallback: 0.55)
+        copy.perspectiveFeather = clamp(perspectiveFeather, 0...0.2, fallback: 0.06)
         return copy
     }
 

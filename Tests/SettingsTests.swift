@@ -60,9 +60,11 @@ final class SettingsTests: XCTestCase {
         let model = AppModel(defaults: defaults)
         model.configuration.animationMode = .perspective
         model.configuration.perspectiveStrength = 0.8
+        model.configuration.perspectiveFeather = 0.12
         let restored = AppModel(defaults: defaults)
         XCTAssertEqual(restored.configuration.animationMode, .perspective)
         XCTAssertEqual(restored.configuration.perspectiveStrength, 0.8)
+        XCTAssertEqual(restored.configuration.perspectiveFeather, 0.12)
         var configuration = restored.configuration
         configuration.perspectiveStrength = -1
         XCTAssertEqual(configuration.validated().perspectiveStrength, 0)
@@ -70,6 +72,12 @@ final class SettingsTests: XCTestCase {
         XCTAssertEqual(configuration.validated().perspectiveStrength, 1)
         configuration.perspectiveStrength = .nan
         XCTAssertEqual(configuration.validated().perspectiveStrength, 0.55)
+        configuration.perspectiveFeather = .nan
+        XCTAssertEqual(configuration.validated().perspectiveFeather, 0.06)
+        configuration.perspectiveFeather = 1
+        XCTAssertEqual(configuration.validated().perspectiveFeather, 0.2)
+        configuration.perspectiveFeather = -1
+        XCTAssertEqual(configuration.validated().perspectiveFeather, 0)
     }
     @MainActor
     func testUpgradeKeepsCalibrationAndBlurFromFoldingVersion() throws {
@@ -91,6 +99,7 @@ final class SettingsTests: XCTestCase {
         XCTAssertEqual(model.configuration.animationMode, .sweep)
         XCTAssertEqual(model.configuration.sweepDirection, .down)
         XCTAssertEqual(model.configuration.perspectiveStrength, 0.55)
+        XCTAssertEqual(model.configuration.perspectiveFeather, 0.06)
         model.configuration.edgeSoftness = 0.2
         XCTAssertEqual(AppModel(defaults: defaults).configuration.edgeSoftness, 0.2)
     }

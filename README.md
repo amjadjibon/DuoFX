@@ -49,6 +49,8 @@ For a gentle sweep, use **Settings → Effect → Use recommended settings**: 18
 
 **Settings → Effect → Animation → Perspective** tilts the captured desktop toward the destination edge over a black backdrop, while retaining the progressive blur and shadow. Top-to-bottom motion anchors the bottom edge like a laptop hinge. **Perspective strength** adjusts the tilt from 0% (identical to Soft fold) to 100% (up to 75°); the initial strength is 55%. Opening reverses the projection. Use **Play demo** to try it in the sample preview. This is a visual transformation: mouse targets stay at their original desktop positions. Existing installations keep their selected animation until Perspective is chosen.
 
+**Edge fade** softens the three moving perspective edges into the backdrop. It defaults to 6% of the shorter display dimension and can be adjusted from 0% (crisp antialiased edges) to 20% (a broad fade). The fade grows gently as the tilt starts and recedes as the lid opens; the hinge stays anchored. It is independent of the blur's **Soft edge** control.
+
 Visible animation follows Metal's display refresh callbacks, requesting up to 120 FPS on supported displays. Sensor/capture sampling remains at 60 Hz; intermediate animation frames use continuous easing. A timer keeps lid detection running when the overlay is hidden or drawing stops. Blur sweep and Soft fold keep desktop coordinates fixed; Perspective projects the captured image around its hinge.
 
 ### Permission enabled but capture still denied

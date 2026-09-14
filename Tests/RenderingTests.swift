@@ -13,7 +13,7 @@ final class RenderingTests: XCTestCase {
         XCTAssertEqual(mesh.last?.position, [-1, 1])
         XCTAssertEqual(mesh.last?.uv, [0, 0])
         XCTAssertEqual(MemoryLayout<MeshVertex>.stride, 16)
-        XCTAssertEqual(MemoryLayout<RenderUniforms>.stride, 48)
+        XCTAssertEqual(MemoryLayout<RenderUniforms>.stride, 52)
     }
 
     func testDesktopPixelsNeverMoveAtAnyLidAngle() throws {
@@ -252,6 +252,30 @@ final class RenderingTests: XCTestCase {
                 try fixture.save(image, to: URL(fileURLWithPath: directory).appendingPathComponent("perspective-\(name).png"))
             }
         }
+    }
+
+    func testPerspectiveOutlineFadesGraduallyAndWidthIsAdjustable() throws {
+        let fixture = try RenderFixture()
+        fixture.renderer.configuration.animationMode = .perspective
+        fixture.renderer.configuration.perspectiveStrength = 1
+        fixture.renderer.configuration.blurStrength = 0
+        fixture.renderer.configuration.foldShadow = 0
+        fixture.renderer.configuration.perspectiveFeather = 0
+        let crisp = try fixture.render(0.5)
+        fixture.renderer.configuration.perspectiveFeather = 0.12
+        let faded = try fixture.render(0.5)
+        let ramp = [28, 30, 32, 34].map { fixture.pixel(faded, 16, $0)[2] }
+        XCTAssertEqual(ramp, ramp.sorted())
+        XCTAssertGreaterThan(ramp.last!, ramp.first! + 100)
+        XCTAssertGreaterThan(ramp.first!, 0)
+        XCTAssertLessThan(fixture.pixel(faded, 16, 30)[2], fixture.pixel(crisp, 16, 30)[2] - 50)
+        // Both slanted sides soften too, while the center near the hinge stays intact.
+        XCTAssertLessThan(fixture.pixel(faded, 8, 40)[2], fixture.pixel(crisp, 8, 40)[2])
+        XCTAssertLessThan(fixture.pixel(faded, 55, 40)[1], fixture.pixel(crisp, 55, 40)[1])
+        XCTAssertEqual(fixture.pixel(faded, 16, 60), fixture.pixel(crisp, 16, 60))
+        XCTAssertEqual(try fixture.render(0), fixture.original)
+        _ = try fixture.render(1)
+        XCTAssertEqual(try fixture.render(0.5), faded)
     }
 }
 

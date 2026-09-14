@@ -41,6 +41,7 @@ struct RenderUniforms {
     var foldBlurRadius: Float
     var isPerspective: UInt32
     var perspectiveStrength: Float
+    var perspectiveFeather: Float
 }
 
 /// Submission is thread-safe. Rendering and configuration run on the main thread.
@@ -193,7 +194,7 @@ final class MetalRenderer: NSObject, MTKViewDelegate, @unchecked Sendable {
             foldShadow: Float(c.foldShadow), foldWidth: Float(c.foldWidth),
             foldBlurRadius: Float(c.blurStrength) * 2.4,
             isPerspective: c.animationMode == .perspective ? 1 : 0,
-            perspectiveStrength: Float(c.perspectiveStrength))
+            perspectiveStrength: Float(c.perspectiveStrength), perspectiveFeather: Float(c.perspectiveFeather))
         encoder.setRenderPipelineState(pipeline)
         encoder.setVertexBuffer(mesh, offset: 0, index: 0)
         encoder.setFragmentBytes(&uniforms, length: MemoryLayout<RenderUniforms>.stride, index: 0)

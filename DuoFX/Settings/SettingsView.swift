@@ -165,6 +165,8 @@ struct SettingsView: View {
                 if model.configuration.animationMode == .perspective {
                     adjustment("Perspective strength", detail: "Tilt the captured desktop toward the hinge", value: $model.configuration.perspectiveStrength,
                                range: 0...1, display: percent(model.configuration.perspectiveStrength))
+                    adjustment("Edge fade", detail: "Soften the tilted outline into the dark backdrop", value: $model.configuration.perspectiveFeather,
+                               range: 0...0.2, display: percent(model.configuration.perspectiveFeather))
                     Text("Tilts the desktop image over a dark backdrop. Mouse targets stay in their original positions. Try Play demo first.")
                         .font(.caption).foregroundStyle(.secondary)
                 }

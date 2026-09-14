@@ -15,6 +15,7 @@ struct Uniforms {
     float foldBlurRadius;
     uint isPerspective;
     float perspectiveStrength;
+    float perspectiveFeather;
 };
 struct VertexOut {
     float4 position [[position]];
@@ -82,13 +83,19 @@ fragment float4 blurFragment(VertexOut in [[stage_in]],
         float depth = 0.6 * sin(angle);
         float height = (1.0 - local.y) / max(0.0001, cos(angle) - (1.0 - local.y) * depth);
         float2 projected = float2(0.5 + (local.x - 0.5) * (1.0 + height * depth), 1.0 - height);
-        // Keep the hinge edge exact; feather only the three moving edges.
-        float2 feather = max(fwidth(local), float2(0.00001));
         float halfWidth = 0.5 / (1.0 + height * depth);
         float top = 1.0 - cos(angle) / (1.0 + depth);
-        panelCoverage = smoothstep(-feather.x, feather.x, local.x - (0.5 - halfWidth))
-            * smoothstep(-feather.x, feather.x, (0.5 + halfWidth) - local.x)
-            * smoothstep(top - feather.y, top + feather.y, local.y);
+        // Fade inward from all three moving edges into the dark backdrop.
+        // Derivatives express the width in screen pixels, keeping the fade
+        // consistent along sloped sides and across portrait/landscape outputs.
+        float3 distance = float3(local.x - (0.5 - halfWidth),
+                                 (0.5 + halfWidth) - local.x, local.y - top);
+        float3 aa = max(fwidth(distance), float3(0.00001));
+        float2 pixel = max(fwidth(local), float2(0.00001));
+        float fadePixels = u.perspectiveFeather / max(pixel.x, pixel.y)
+            * smoothstep(0.0, 0.2, u.progress * u.perspectiveStrength);
+        float3 edge = smoothstep(-aa, aa * (1.0 + fadePixels), distance);
+        panelCoverage = edge.x * edge.y * edge.z;
         sourceUV = desktopUV(saturate(projected), u.direction);
     }
     float coordinate = directedUV(sourceUV, u.direction).y;

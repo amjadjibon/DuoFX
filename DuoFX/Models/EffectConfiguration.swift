@@ -30,7 +30,7 @@ public enum DesktopSource: String, CaseIterable, Identifiable, Codable, Sendable
 }
 
 public enum AnimationMode: String, CaseIterable, Identifiable, Codable, Sendable {
-    case sweep, fold
+    case sweep, fold, perspective
     public var id: Self { self }
 }
 
@@ -62,6 +62,7 @@ public struct EffectConfiguration: Codable, Equatable, Sendable {
     public var sweepDirection: SweepDirection = .down
     public var foldShadow = 0.55
     public var foldWidth = 0.18
+    public var perspectiveStrength = 0.55
     public var soundEnabled = false
     public var soundVolume = 0.25
     public init() {}
@@ -69,7 +70,7 @@ public struct EffectConfiguration: Codable, Equatable, Sendable {
     private enum CodingKeys: String, CodingKey {
         case style, workingAngle, minimumAngle, edgeSoftness, blurStrength, shadowStrength
         case soundEnabled, soundVolume, motionResponse
-        case animationMode, sweepDirection, foldShadow, foldWidth
+        case animationMode, sweepDirection, foldShadow, foldWidth, perspectiveStrength
     }
 
     public init(from decoder: Decoder) throws {
@@ -89,6 +90,7 @@ public struct EffectConfiguration: Codable, Equatable, Sendable {
         sweepDirection = try values.decodeIfPresent(SweepDirection.self, forKey: .sweepDirection) ?? .down
         foldShadow = try values.decodeIfPresent(Double.self, forKey: .foldShadow) ?? 0.55
         foldWidth = try values.decodeIfPresent(Double.self, forKey: .foldWidth) ?? 0.18
+        perspectiveStrength = try values.decodeIfPresent(Double.self, forKey: .perspectiveStrength) ?? 0.55
     }
 
     public func validated() -> Self {
@@ -102,6 +104,7 @@ public struct EffectConfiguration: Codable, Equatable, Sendable {
         copy.motionResponse = clamp(motionResponse, 0.08...0.4, fallback: 0.20)
         copy.foldShadow = clamp(foldShadow, 0...1, fallback: 0.55)
         copy.foldWidth = clamp(foldWidth, 0.04...0.35, fallback: 0.18)
+        copy.perspectiveStrength = clamp(perspectiveStrength, 0...1, fallback: 0.55)
         return copy
     }
 

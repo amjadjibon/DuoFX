@@ -13,7 +13,7 @@ final class RenderingTests: XCTestCase {
         XCTAssertEqual(mesh.last?.position, [-1, 1])
         XCTAssertEqual(mesh.last?.uv, [0, 0])
         XCTAssertEqual(MemoryLayout<MeshVertex>.stride, 16)
-        XCTAssertEqual(MemoryLayout<RenderUniforms>.stride, 40)
+        XCTAssertEqual(MemoryLayout<RenderUniforms>.stride, 48)
     }
 
     func testDesktopPixelsNeverMoveAtAnyLidAngle() throws {
@@ -98,7 +98,7 @@ final class RenderingTests: XCTestCase {
             (.down, 32, 8, 32, 56), (.up, 32, 56, 32, 8),
             (.right, 8, 32, 56, 32), (.left, 56, 32, 8, 32)
         ]
-        for mode in AnimationMode.allCases {
+        for mode: AnimationMode in [.sweep, .fold] {
             fixture.renderer.configuration.animationMode = mode
             for (direction, x, y, clearX, clearY) in probes {
                 fixture.renderer.configuration.sweepDirection = direction
@@ -183,6 +183,73 @@ final class RenderingTests: XCTestCase {
             XCTAssertEqual(image.count, fixture.width * fixture.height * 4)
             if let directory = ProcessInfo.processInfo.environment["DUOFX_PREVIEW_SNAPSHOTS"] {
                 try fixture.save(image, to: URL(fileURLWithPath: directory).appendingPathComponent("fold-\(name).png"))
+            }
+        }
+    }
+
+    func testPerspectiveProjectsTowardHingeAndReverses() throws {
+        let fixture = try RenderFixture()
+        fixture.renderer.configuration.animationMode = .perspective
+        fixture.renderer.configuration.perspectiveStrength = 1
+        fixture.renderer.configuration.blurStrength = 0
+        fixture.renderer.configuration.foldShadow = 0
+        XCTAssertEqual(try fixture.render(0), fixture.original)
+        let halfway = try fixture.render(0.5)
+        XCTAssertEqual(fixture.pixel(halfway, 16, 4), [0, 0, 0, 255])
+        XCTAssertEqual(fixture.pixel(halfway, 16, 38), [0, 0, 255, 255], "Projection moves the red upper half downward")
+        XCTAssertEqual(fixture.pixel(halfway, 16, 60), fixture.pixel(fixture.original, 16, 60))
+        let closed = try fixture.render(1)
+        XCTAssertEqual(fixture.pixel(closed, 16, 38), [0, 0, 0, 255])
+        XCTAssertEqual(try fixture.render(0.5), halfway)
+        fixture.renderer.isOverlay = true
+        XCTAssertTrue(try fixture.render(0).allSatisfy { $0 == 0 })
+        XCTAssertEqual(try fixture.render(0.5), halfway, "Backdrop must conceal the untransformed desktop")
+    }
+
+    func testPerspectiveStrengthZeroMatchesSoftFoldInEveryDirection() throws {
+        let fixture = try RenderFixture()
+        fixture.renderer.configuration.blurStrength = 8
+        fixture.renderer.configuration.perspectiveStrength = 0
+        for overlay in [false, true] {
+            fixture.renderer.isOverlay = overlay
+            for direction in SweepDirection.allCases {
+                fixture.renderer.configuration.sweepDirection = direction
+                for progress: Float in [0, 0.25, 0.5, 1] {
+                    fixture.renderer.configuration.animationMode = .fold
+                    let fold = try fixture.render(progress)
+                    fixture.renderer.configuration.animationMode = .perspective
+                    XCTAssertEqual(try fixture.render(progress), fold)
+                }
+            }
+        }
+    }
+
+    func testPerspectiveDirectionsKeepDestinationEdgeVisible() throws {
+        let fixture = try RenderFixture()
+        fixture.renderer.configuration.animationMode = .perspective
+        fixture.renderer.configuration.perspectiveStrength = 1
+        fixture.renderer.configuration.blurStrength = 0
+        fixture.renderer.configuration.foldShadow = 0
+        for (direction, x, y, blankX, blankY): (SweepDirection, Int, Int, Int, Int) in [
+            (.down, 16, 60, 16, 4), (.up, 16, 4, 16, 60),
+            (.right, 60, 16, 4, 16), (.left, 4, 16, 60, 16)
+        ] {
+            fixture.renderer.configuration.sweepDirection = direction
+            let image = try fixture.render(0.5)
+            XCTAssertEqual(fixture.pixel(image, x, y), fixture.pixel(fixture.original, x, y))
+            XCTAssertEqual(fixture.pixel(image, blankX, blankY), [0, 0, 0, 255])
+        }
+    }
+
+    func testPerspectiveBundledPreviewRenders() throws {
+        let fixture = try RenderFixture(useBundledImage: true)
+        fixture.renderer.configuration.applyFoldReference()
+        fixture.renderer.configuration.animationMode = .perspective
+        for (name, progress): (String, Float) in [("open", 0), ("half", 0.5), ("closed", 1)] {
+            let image = try fixture.render(progress)
+            XCTAssertEqual(image.count, fixture.width * fixture.height * 4)
+            if let directory = ProcessInfo.processInfo.environment["DUOFX_PREVIEW_SNAPSHOTS"] {
+                try fixture.save(image, to: URL(fileURLWithPath: directory).appendingPathComponent("perspective-\(name).png"))
             }
         }
     }

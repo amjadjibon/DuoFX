@@ -151,18 +151,27 @@ struct SettingsView: View {
     private var appearanceControls: some View {
         Group {
             VStack(alignment: .leading, spacing: 12) {
-                sectionHeading("Animation", detail: "Choose how the blur moves across your desktop.")
+                sectionHeading("Animation", detail: "Choose how your desktop responds to the lid.")
                 Picker("Animation", selection: $model.configuration.animationMode) {
                     Text("Blur sweep").tag(AnimationMode.sweep)
                     Text("Soft fold").tag(AnimationMode.fold)
+                    Text("Perspective").tag(AnimationMode.perspective)
                 }.pickerStyle(.segmented).labelsHidden()
                 Picker("Direction", selection: $model.configuration.sweepDirection) {
                     ForEach(SweepDirection.allCases) { Text($0.title).tag($0) }
                 }
                 Button("Use reference look") { model.configuration.applyFoldReference() }
                     .help("Progressive blur and shadow inspired by iPhone Duo, flowing top to bottom.")
-                if model.configuration.animationMode == .fold {
-                    Text("Blur builds behind the moving edge as you close the lid, followed by a deepening shadow. Your desktop stays in place.")
+                if model.configuration.animationMode == .perspective {
+                    adjustment("Perspective strength", detail: "Tilt the captured desktop toward the hinge", value: $model.configuration.perspectiveStrength,
+                               range: 0...1, display: percent(model.configuration.perspectiveStrength))
+                    Text("Tilts the desktop image over a dark backdrop. Mouse targets stay in their original positions. Try Play demo first.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                if model.configuration.animationMode != .sweep {
+                    Text(model.configuration.animationMode == .fold
+                         ? "Blur builds behind the moving edge as you close the lid, followed by a deepening shadow. Your desktop stays in place."
+                         : "Blur and shadow build as the desktop tilts. Set perspective strength to zero for the fixed-desktop Soft fold look.")
                         .font(.caption).foregroundStyle(.secondary)
                     adjustment("Fold shadow", detail: "Darken the area behind the moving blur", value: $model.configuration.foldShadow,
                                range: 0...1, display: percent(model.configuration.foldShadow))
@@ -182,7 +191,7 @@ struct SettingsView: View {
             Divider()
             VStack(spacing: 20) {
                 adjustment("Blur", detail: "How soft the covered area becomes", value: $model.configuration.blurStrength,
-                           range: 0...30, display: model.configuration.animationMode == .fold
+                           range: 0...30, display: model.configuration.animationMode != .sweep
                            ? percent(model.configuration.blurStrength / 30) : "\(Int(model.configuration.blurStrength.rounded())) px")
                 adjustment("Soft edge", detail: "Blend the boundary into your desktop", value: $model.configuration.edgeSoftness,
                            range: 0.02...0.3, display: percent(model.configuration.edgeSoftness))

@@ -39,6 +39,8 @@ struct RenderUniforms {
     var foldShadow: Float
     var foldWidth: Float
     var foldBlurRadius: Float
+    var isPerspective: UInt32
+    var perspectiveStrength: Float
 }
 
 /// Submission is thread-safe. Rendering and configuration run on the main thread.
@@ -149,9 +151,10 @@ final class MetalRenderer: NSObject, MTKViewDelegate, @unchecked Sendable {
         pass.colorAttachments[0].storeAction = .store
         var texture = frame.texture
         // Soft fold samples continuously varying radii from a GPU mip pyramid.
-        // Sweep retains its constant Gaussian radius. Neither path moves UVs.
+        // Sweep retains its constant Gaussian radius. Perspective projects UVs
+        // in the fragment shader and shares Soft fold's variable-radius blur.
         let sigma = (Float(c.blurStrength) * 2).rounded() / 2
-        if c.animationMode == .fold && p > 0 && c.blurStrength > 0 {
+        if c.animationMode != .sweep && p > 0 && c.blurStrength > 0 {
             if foldTexture?.width != texture.width || foldTexture?.height != texture.height ||
                 foldTexture?.pixelFormat != texture.pixelFormat {
                 let descriptor = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: texture.pixelFormat,
@@ -186,9 +189,11 @@ final class MetalRenderer: NSObject, MTKViewDelegate, @unchecked Sendable {
         guard let encoder = command.makeRenderCommandEncoder(descriptor: pass) else { throw RendererError.allocation }
         var uniforms = RenderUniforms(progress: p, opacity: opacity,
             shadow: Float(c.shadowStrength), edgeSoftness: Float(c.edgeSoftness), isOverlay: isOverlay ? 1 : 0,
-            direction: c.sweepDirection.shaderValue, isFold: c.animationMode == .fold ? 1 : 0,
+            direction: c.sweepDirection.shaderValue, isFold: c.animationMode != .sweep ? 1 : 0,
             foldShadow: Float(c.foldShadow), foldWidth: Float(c.foldWidth),
-            foldBlurRadius: Float(c.blurStrength) * 2.4)
+            foldBlurRadius: Float(c.blurStrength) * 2.4,
+            isPerspective: c.animationMode == .perspective ? 1 : 0,
+            perspectiveStrength: Float(c.perspectiveStrength))
         encoder.setRenderPipelineState(pipeline)
         encoder.setVertexBuffer(mesh, offset: 0, index: 0)
         encoder.setFragmentBytes(&uniforms, length: MemoryLayout<RenderUniforms>.stride, index: 0)

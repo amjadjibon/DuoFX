@@ -24,7 +24,7 @@ final class RenderingPerformanceTests: XCTestCase {
         clear.colorAttachments[0].clearColor = MTLClearColorMake(0.3, 0.5, 0.7, 1)
         try XCTUnwrap(setup.makeRenderCommandEncoder(descriptor: clear)).endEncoding()
         setup.commit(); setup.waitUntilCompleted()
-        for (mode, radius): (AnimationMode, Double) in [(.sweep, 0), (.sweep, 12), (.sweep, 18), (.fold, 30)] {
+        for (mode, radius): (AnimationMode, Double) in [(.sweep, 0), (.sweep, 12), (.sweep, 18), (.fold, 30), (.perspective, 30)] {
             renderer.clear(); renderer.configuration.animationMode = mode
             renderer.configuration.blurStrength = radius
             var times: [Double] = []

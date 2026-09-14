@@ -51,6 +51,26 @@ final class SettingsTests: XCTestCase {
         XCTAssertEqual(restored.angleSource, .manual)
         XCTAssertEqual(restored.desktopSource, .testImage)
     }
+
+    @MainActor
+    func testPerspectiveSettingsPersistAndValidate() throws {
+        let suite = "DuoFXTests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let model = AppModel(defaults: defaults)
+        model.configuration.animationMode = .perspective
+        model.configuration.perspectiveStrength = 0.8
+        let restored = AppModel(defaults: defaults)
+        XCTAssertEqual(restored.configuration.animationMode, .perspective)
+        XCTAssertEqual(restored.configuration.perspectiveStrength, 0.8)
+        var configuration = restored.configuration
+        configuration.perspectiveStrength = -1
+        XCTAssertEqual(configuration.validated().perspectiveStrength, 0)
+        configuration.perspectiveStrength = 2
+        XCTAssertEqual(configuration.validated().perspectiveStrength, 1)
+        configuration.perspectiveStrength = .nan
+        XCTAssertEqual(configuration.validated().perspectiveStrength, 0.55)
+    }
     @MainActor
     func testUpgradeKeepsCalibrationAndBlurFromFoldingVersion() throws {
         let suite = "DuoFXTests.\(UUID().uuidString)"
@@ -70,6 +90,7 @@ final class SettingsTests: XCTestCase {
         XCTAssertEqual(model.configuration.motionResponse, 0.20)
         XCTAssertEqual(model.configuration.animationMode, .sweep)
         XCTAssertEqual(model.configuration.sweepDirection, .down)
+        XCTAssertEqual(model.configuration.perspectiveStrength, 0.55)
         model.configuration.edgeSoftness = 0.2
         XCTAssertEqual(AppModel(defaults: defaults).configuration.edgeSoftness, 0.2)
     }

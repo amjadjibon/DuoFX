@@ -14,9 +14,12 @@ final class EffectCoordinator {
     private let sound: any EffectSoundPlaying
     private var soundTrigger = LidSoundTrigger()
     private let screenProvider: @MainActor () -> NSScreen?
+    private let now: @MainActor () -> TimeInterval
     private var renderer: MetalRenderer?
     private var timer: Timer?
     private var lastDrawTime = -Double.infinity
+    private var awaitingPresentation = false
+    private var presentationStart: TimeInterval?
     private var observers: [(NotificationCenter, NSObjectProtocol)] = []
     private var localEscape: Any?
     private var globalEscape: Any?
@@ -41,11 +44,13 @@ final class EffectCoordinator {
     init(model: AppModel, capture: (any ScreenCapturing)? = nil,
          overlay: (any OverlayPresenting)? = nil,
          sound: (any EffectSoundPlaying)? = nil,
-         screenProvider: @escaping @MainActor () -> NSScreen? = OverlayWindowController.builtInScreen) {
+         screenProvider: @escaping @MainActor () -> NSScreen? = OverlayWindowController.builtInScreen,
+         now: @escaping @MainActor () -> TimeInterval = { ProcessInfo.processInfo.systemUptime }) {
         self.model = model; self.capture = capture ?? ScreenCaptureService()
         self.overlay = overlay ?? OverlayWindowController()
         self.sound = sound ?? EffectSoundPlayer()
         self.screenProvider = screenProvider
+        self.now = now
     }
 
     func start() {
@@ -122,7 +127,7 @@ final class EffectCoordinator {
                     guard let self else { return }
                     // The display drives visible animation. Keep polling while
                     // hidden or if drawing stops, so lid/sleep recovery still works.
-                    if !self.hasFrame || ProcessInfo.processInfo.systemUptime - self.lastDrawTime > 0.05 {
+                    if !self.hasFrame || self.now() - self.lastDrawTime > 0.05 {
                         self.tick()
                     }
                 }
@@ -135,12 +140,26 @@ final class EffectCoordinator {
     private func tick() {
         guard model.isEnabled, suspensions.isEmpty, !shuttingDown else { return }
         let c = model.configuration.validated()
-        let angle = smoother.update(rawAngle, at: ProcessInfo.processInfo.systemUptime, response: c.motionResponse)
+        let time = now()
+        let angle = smoother.update(rawAngle, at: time, response: c.motionResponse)
         model.currentAngle = angle; model.velocity = smoother.velocity
         model.progress = closingProgress(angle: angle, workingAngle: c.workingAngle, minimumAngle: c.minimumAngle)
-        renderer?.configuration = c; renderer?.progress = model.progress
+        var visibleProgress = model.progress
+        if c.animationMode == .perspective {
+            if awaitingPresentation {
+                visibleProgress = 0
+            } else if let start = presentationStart {
+                // Capture can start after the lid has already moved. Reveal the
+                // tilt from zero on the display's clock, then track the lid
+                // directly once caught up. Hidden/capture time never consumes it.
+                let duration = c.motionResponse * 2
+                visibleProgress *= smoothstep(0, Float(duration), Float(time - start))
+                if time - start >= duration { presentationStart = nil }
+            }
+        }
+        renderer?.configuration = c; renderer?.progress = visibleProgress
         if hasFrame && c.soundEnabled && c.soundVolume > 0 {
-            if let cue = soundTrigger.update(progress: Double(model.progress), at: ProcessInfo.processInfo.systemUptime) {
+            if let cue = soundTrigger.update(progress: Double(model.progress), at: time) {
                 sound.play(cue, volume: c.soundVolume)
             }
         } else {
@@ -170,6 +189,7 @@ final class EffectCoordinator {
         // Hide synchronously. A pending permission dialog/start must never reopen it.
         capture.invalidate()
         overlay.hide(); renderer?.clear(); hasFrame = false
+        awaitingPresentation = false; presentationStart = nil
         firstFrameTask?.cancel(); firstFrameTask = nil
         model.isCapturing = false
         if transition == nil {
@@ -192,7 +212,11 @@ final class EffectCoordinator {
                 renderer.onWillDraw = { [weak self] in
                     MainActor.assumeIsolated {
                         guard let self else { return }
-                        self.lastDrawTime = ProcessInfo.processInfo.systemUptime
+                        self.lastDrawTime = self.now()
+                        if self.awaitingPresentation {
+                            self.awaitingPresentation = false
+                            self.presentationStart = self.lastDrawTime
+                        }
                         self.tick()
                     }
                 }
@@ -253,6 +277,9 @@ final class EffectCoordinator {
               !shuttingDown, let renderer,
               let screen = screenProvider() else { return }
         hasFrame = true; firstFrameTask?.cancel(); firstFrameTask = nil
+        awaitingPresentation = model.configuration.animationMode == .perspective
+        presentationStart = nil
+        if awaitingPresentation { renderer.progress = 0 }
         overlay.show(renderer: renderer, on: screen)
         model.status = target?.source == .liveDesktop ? "Live desktop · on this Mac only" : "Bundled image preview"
     }

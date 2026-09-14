@@ -9,7 +9,10 @@ final class RenderingPerformanceTests: XCTestCase {
             throw XCTSkip("Opt in with DUOFX_RENDER_BENCHMARK=1 for GPU timings")
         }
         guard let device = MTLCreateSystemDefaultDevice() else { throw XCTSkip("Metal unavailable") }
+        let creationStart = ProcessInfo.processInfo.systemUptime
         let renderer = try MetalRenderer(device: device)
+        print(String(format: "DuoFX renderer creation: %.3f ms",
+                     (ProcessInfo.processInfo.systemUptime - creationStart) * 1000))
         let queue = try XCTUnwrap(device.makeCommandQueue())
         let descriptor = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: .bgra8Unorm,
             width: 3024, height: 1964, mipmapped: false)
@@ -32,10 +35,16 @@ final class RenderingPerformanceTests: XCTestCase {
                 renderer.progress = Float(index % 100 + 1) / 100
                 let pass = MTLRenderPassDescriptor(); pass.colorAttachments[0].texture = output
                 let command = try XCTUnwrap(queue.makeCommandBuffer())
+                let encodeStart = ProcessInfo.processInfo.systemUptime
                 try renderer.encode(frame: CapturedTexture(texture: input, reference: nil, pixelBuffer: nil),
                                     pass: pass, command: command)
+                let encodeMS = (ProcessInfo.processInfo.systemUptime - encodeStart) * 1000
                 command.commit(); command.waitUntilCompleted()
                 XCTAssertEqual(command.status, .completed)
+                if index == 0 {
+                    print(String(format: "DuoFX %@ first encode=%.3f ms GPU=%.3f ms", mode.rawValue,
+                                 encodeMS, (command.gpuEndTime - command.gpuStartTime) * 1000))
+                }
                 if index >= 20 { times.append((command.gpuEndTime - command.gpuStartTime) * 1000) }
             }
             times.sort()

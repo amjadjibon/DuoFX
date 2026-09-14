@@ -118,11 +118,14 @@ final class MetalRenderer: NSObject, MTKViewDelegate, @unchecked Sendable {
     func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {}
 
     func draw(in view: MTKView) {
-        onWillDraw?()
         guard inFlight.wait(timeout: .now()) == .success else { return }
-        frameLock.lock(); let frame = latestFrame; frameLock.unlock()
-        guard let frame, let drawable = view.currentDrawable,
+        guard let drawable = view.currentDrawable,
               let pass = view.currentRenderPassDescriptor else { inFlight.signal(); return }
+        // Start presentation timing only when a drawable is available. Waiting
+        // for the initial surface must not consume the clear-to-tilted reveal.
+        onWillDraw?()
+        frameLock.lock(); let frame = latestFrame; frameLock.unlock()
+        guard let frame else { inFlight.signal(); return }
         guard let command = commandQueue.makeCommandBuffer() else {
             inFlight.signal(); onFailure?(RendererError.allocation); return
         }

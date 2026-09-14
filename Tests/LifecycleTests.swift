@@ -7,7 +7,8 @@ import XCTest
 
 @MainActor
 final class LifecycleTests: XCTestCase {
-    private func fixture(sound: (any EffectSoundPlaying)? = nil) throws -> (AppModel, DelayedCapture, RecordingOverlay, EffectCoordinator, String) {
+    private func fixture(sound: (any EffectSoundPlaying)? = nil,
+                         now: @escaping @MainActor () -> TimeInterval = { ProcessInfo.processInfo.systemUptime }) throws -> (AppModel, DelayedCapture, RecordingOverlay, EffectCoordinator, String) {
         guard MTLCreateSystemDefaultDevice() != nil, let screen = NSScreen.screens.first else {
             throw XCTSkip("A display and Metal are required for coordinator integration tests")
         }
@@ -17,7 +18,7 @@ final class LifecycleTests: XCTestCase {
         model.desktopSource = .liveDesktop; model.manualAngle = 60; model.isEnabled = true
         let capture = DelayedCapture()
         let overlay = RecordingOverlay()
-        let coordinator = EffectCoordinator(model: model, capture: capture, overlay: overlay, sound: sound, screenProvider: { screen })
+        let coordinator = EffectCoordinator(model: model, capture: capture, overlay: overlay, sound: sound, screenProvider: { screen }, now: now)
         return (model, capture, overlay, coordinator, suite)
     }
 
@@ -78,6 +79,42 @@ final class LifecycleTests: XCTestCase {
         for _ in 0..<5 { await Task.yield() }
         XCTAssertEqual(capture.startCount, 0)
         XCTAssertEqual(overlay.showCount, 0)
+        await coordinator.shutdown()
+    }
+
+    func testPerspectiveStartsUntransformedAfterWaitingForCapture() async throws {
+        var time = 100.0
+        let (model, capture, overlay, coordinator, suite) = try fixture(now: { time })
+        defer { UserDefaults.standard.removePersistentDomain(forName: suite) }
+        model.configuration.animationMode = .perspective
+        coordinator.start()
+        await waitUntil { capture.startCount == 1 }
+        XCTAssertGreaterThan(model.progress, 0.4)
+        capture.finishStart(); capture.deliverFrame()
+        await waitUntil { overlay.showCount == 1 }
+        XCTAssertEqual(overlay.initialProgress, 0, "The first visible frame must not jump to the lid's already-advanced position")
+        let renderer = try XCTUnwrap(overlay.renderer)
+        // Even a long wait for the first drawable must not advance the reveal.
+        time += 2
+        renderer.onWillDraw?()
+        XCTAssertEqual(renderer.progress, 0)
+        var previous: Float = 0
+        for _ in 0..<60 {
+            time += 1.0 / 120
+            renderer.onWillDraw?()
+            XCTAssertGreaterThanOrEqual(renderer.progress, previous)
+            XCTAssertLessThan(renderer.progress - previous, 0.04)
+            previous = renderer.progress
+        }
+        XCTAssertEqual(renderer.progress, model.progress, accuracy: 0.0001)
+        // Every visibility session needs its own clear first frame.
+        NSWorkspace.shared.notificationCenter.post(name: NSWorkspace.willSleepNotification, object: nil)
+        await waitUntil { !capture.isRunning }
+        NSWorkspace.shared.notificationCenter.post(name: NSWorkspace.didWakeNotification, object: nil)
+        await waitUntil { capture.startCount == 2 }
+        capture.finishStart(); capture.deliverFrame()
+        await waitUntil { overlay.showCount == 2 }
+        XCTAssertEqual(overlay.initialProgress, 0)
         await coordinator.shutdown()
     }
 
@@ -186,8 +223,14 @@ private final class DelayedCapture: ScreenCapturing {
 
 @MainActor
 private final class RecordingOverlay: OverlayPresenting {
+    var initialProgress: Float?
+    var renderer: MetalRenderer?
     var showCount = 0
     var hideCount = 0
-    func show(renderer: MetalRenderer, on screen: NSScreen) { showCount += 1 }
+    func show(renderer: MetalRenderer, on screen: NSScreen) {
+        initialProgress = renderer.progress
+        self.renderer = renderer
+        showCount += 1
+    }
     func hide() { hideCount += 1 }
 }

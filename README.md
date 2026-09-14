@@ -51,6 +51,8 @@ For a gentle sweep, use **Settings → Effect → Use recommended settings**: 18
 
 **Edge fade** softens the three moving perspective edges into the backdrop. It defaults to 6% of the shorter display dimension and can be adjusted from 0% (crisp antialiased edges) to 20% (a broad fade). The fade grows gently as the tilt starts and recedes as the lid opens; the hinge stays anchored. It is independent of the blur's **Soft edge** control.
 
+Perspective starts each visible session clear, then eases into the current lid position over twice the **Motion easing** value. This transition starts when the first drawable is available, so time spent starting capture does not cause the desktop to appear already tilted. Once the transition finishes, Perspective follows the normal lid smoothing without additional delay.
+
 Visible animation follows Metal's display refresh callbacks, requesting up to 120 FPS on supported displays. Sensor/capture sampling remains at 60 Hz; intermediate animation frames use continuous easing. A timer keeps lid detection running when the overlay is hidden or drawing stops. Blur sweep and Soft fold keep desktop coordinates fixed; Perspective projects the captured image around its hinge.
 
 ### Permission enabled but capture still denied

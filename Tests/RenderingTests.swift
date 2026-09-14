@@ -13,7 +13,7 @@ final class RenderingTests: XCTestCase {
         XCTAssertEqual(mesh.last?.position, [-1, 1])
         XCTAssertEqual(mesh.last?.uv, [0, 0])
         XCTAssertEqual(MemoryLayout<MeshVertex>.stride, 16)
-        XCTAssertEqual(MemoryLayout<RenderUniforms>.stride, 20)
+        XCTAssertEqual(MemoryLayout<RenderUniforms>.stride, 40)
     }
 
     func testDesktopPixelsNeverMoveAtAnyLidAngle() throws {
@@ -71,6 +71,118 @@ final class RenderingTests: XCTestCase {
             // Optional test artifacts contain only our bundled fixture, never a capture.
             if let directory = ProcessInfo.processInfo.environment["DUOFX_PREVIEW_SNAPSHOTS"] {
                 try fixture.save(pixels, to: URL(fileURLWithPath: directory).appendingPathComponent("\(name).png"))
+            }
+        }
+    }
+
+    func testFoldKeepsDesktopPixelsFixedInEveryDirection() throws {
+        let fixture = try RenderFixture()
+        fixture.renderer.configuration.animationMode = .fold
+        fixture.renderer.configuration.blurStrength = 0
+        fixture.renderer.configuration.foldShadow = 0
+        for direction in SweepDirection.allCases {
+            fixture.renderer.configuration.sweepDirection = direction
+            for progress: Float in [0, 0.25, 0.5, 0.75, 1] {
+                XCTAssertEqual(try fixture.render(progress), fixture.original,
+                               "Desktop pixels moved in \(direction) at \(progress)")
+            }
+        }
+    }
+
+    func testDirectionControlsCoverageAndLeavesOtherSideTransparent() throws {
+        let fixture = try RenderFixture()
+        fixture.renderer.isOverlay = true
+        fixture.renderer.configuration.blurStrength = 0
+        fixture.renderer.configuration.foldShadow = 0
+        let probes: [(SweepDirection, Int, Int, Int, Int)] = [
+            (.down, 32, 8, 32, 56), (.up, 32, 56, 32, 8),
+            (.right, 8, 32, 56, 32), (.left, 56, 32, 8, 32)
+        ]
+        for mode in AnimationMode.allCases {
+            fixture.renderer.configuration.animationMode = mode
+            for (direction, x, y, clearX, clearY) in probes {
+                fixture.renderer.configuration.sweepDirection = direction
+                XCTAssertTrue(try fixture.render(0).allSatisfy { $0 == 0 })
+                let halfway = try fixture.render(0.5)
+                XCTAssertEqual(fixture.pixel(halfway, x, y)[3], 255)
+                XCTAssertEqual(fixture.pixel(halfway, clearX, clearY), [0, 0, 0, 0])
+                XCTAssertEqual(try fixture.render(1), fixture.original)
+                _ = try fixture.render(0.75)
+                XCTAssertEqual(try fixture.render(0.5), halfway, "Opening must reverse the same shading path")
+            }
+        }
+    }
+
+    func testFoldShadowAddsDepthOnlyOnTheCoveredSide() throws {
+        let fixture = try RenderFixture()
+        fixture.renderer.configuration.animationMode = .fold
+        fixture.renderer.configuration.sweepDirection = .right
+        fixture.renderer.configuration.blurStrength = 0
+        fixture.renderer.configuration.foldShadow = 0
+        let flat = try fixture.render(0.5)
+        fixture.renderer.configuration.foldShadow = 1
+        let shaded = try fixture.render(0.5)
+        XCTAssertLessThan(fixture.pixel(shaded, 8, 8)[2], fixture.pixel(flat, 8, 8)[2] - 20)
+        XCTAssertLessThan(fixture.pixel(shaded, 8, 8)[2], fixture.pixel(shaded, 24, 8)[2])
+        XCTAssertEqual(fixture.pixel(shaded, 56, 8), fixture.pixel(flat, 56, 8))
+        XCTAssertEqual(try fixture.render(0), fixture.original)
+        let closed = try fixture.render(1)
+        XCTAssertEqual(fixture.pixel(closed, 8, 8), [0, 0, 0, 255])
+    }
+
+    func testFoldBlurRadiusBuildsBehindTheFrontAndWithClosing() throws {
+        let fixture = try RenderFixture()
+        fixture.renderer.configuration.animationMode = .fold
+        fixture.renderer.configuration.blurStrength = 8
+        fixture.renderer.configuration.foldShadow = 0
+        let early = try fixture.render(0.25)
+        let halfway = try fixture.render(0.5)
+        let later = try fixture.render(0.75)
+        // Green leaking across a vertical red/green edge measures blur width.
+        // It increases toward the top and as the lid closes, rather than merely
+        // fading a single pre-blurred image over every covered pixel.
+        XCTAssertGreaterThan(fixture.pixel(halfway, 22, 4)[1], fixture.pixel(halfway, 22, 28)[1] + 5)
+        XCTAssertGreaterThan(fixture.pixel(halfway, 22, 4)[1], fixture.pixel(early, 22, 4)[1] + 5)
+        XCTAssertGreaterThan(fixture.pixel(later, 22, 4)[1], fixture.pixel(halfway, 22, 4)[1] + 5)
+        XCTAssertEqual(fixture.pixel(halfway, 22, 56), fixture.pixel(fixture.original, 22, 56))
+        XCTAssertEqual(try fixture.render(0.5), halfway)
+        XCTAssertEqual(try fixture.render(0), fixture.original)
+        fixture.renderer.clear()
+        XCTAssertEqual(try fixture.render(0.5), halfway, "Recreated GPU resources must render identically")
+    }
+
+    func testFoldTransitionWidthSpreadsShadingAndOverlayMatchesPreview() throws {
+        let fixture = try RenderFixture()
+        fixture.renderer.configuration.animationMode = .fold
+        fixture.renderer.configuration.blurStrength = 8
+        fixture.renderer.configuration.foldShadow = 0.7
+        fixture.renderer.configuration.foldWidth = 0.04
+        let narrow = try fixture.render(0.5)
+        fixture.renderer.configuration.foldWidth = 0.35
+        let wide = try fixture.render(0.5)
+        XCTAssertLessThan(fixture.pixel(narrow, 8, 8)[2], fixture.pixel(wide, 8, 8)[2] - 20)
+        fixture.renderer.isOverlay = true
+        let overlay = try fixture.render(0.5)
+        for y in [4, 24, 30, 34, 38, 56] {
+            let actual = fixture.pixel(overlay, 8, y)
+            let background = fixture.pixel(fixture.original, 8, y)
+            let preview = fixture.pixel(wide, 8, y)
+            for channel in 0..<3 {
+                let composed = Float(actual[channel]) + Float(background[channel]) * (1 - Float(actual[3]) / 255)
+                XCTAssertEqual(composed, Float(preview[channel]), accuracy: 1.5)
+                XCTAssertLessThanOrEqual(actual[channel], actual[3], "Overlay must remain premultiplied")
+            }
+        }
+    }
+
+    func testFoldReferencePreviewRenders() throws {
+        let fixture = try RenderFixture(useBundledImage: true)
+        fixture.renderer.configuration.applyFoldReference()
+        for (name, progress): (String, Float) in [("open", 0), ("quarter", 0.25), ("half", 0.5), ("three-quarter", 0.75), ("closed", 1)] {
+            let image = try fixture.render(progress)
+            XCTAssertEqual(image.count, fixture.width * fixture.height * 4)
+            if let directory = ProcessInfo.processInfo.environment["DUOFX_PREVIEW_SNAPSHOTS"] {
+                try fixture.save(image, to: URL(fileURLWithPath: directory).appendingPathComponent("fold-\(name).png"))
             }
         }
     }

@@ -1,6 +1,7 @@
 import MetalKit
 import XCTest
 @testable import DuoFX
+@testable import DuoFXCore
 
 final class RenderingPerformanceTests: XCTestCase {
     func testFullSizeBlurFrameBudget() throws {
@@ -23,8 +24,9 @@ final class RenderingPerformanceTests: XCTestCase {
         clear.colorAttachments[0].clearColor = MTLClearColorMake(0.3, 0.5, 0.7, 1)
         try XCTUnwrap(setup.makeRenderCommandEncoder(descriptor: clear)).endEncoding()
         setup.commit(); setup.waitUntilCompleted()
-        for radius in [0.0, 12, 18] {
-            renderer.clear(); renderer.configuration.blurStrength = radius
+        for (mode, radius): (AnimationMode, Double) in [(.sweep, 0), (.sweep, 12), (.sweep, 18), (.fold, 30)] {
+            renderer.clear(); renderer.configuration.animationMode = mode
+            renderer.configuration.blurStrength = radius
             var times: [Double] = []
             for index in 0..<140 {
                 renderer.progress = Float(index % 100 + 1) / 100
@@ -37,7 +39,7 @@ final class RenderingPerformanceTests: XCTestCase {
                 if index >= 20 { times.append((command.gpuEndTime - command.gpuStartTime) * 1000) }
             }
             times.sort()
-            print(String(format: "DuoFX GPU 3024x1964 blur=%.0f: p50=%.3f p95=%.3f p99=%.3f ms", radius,
+            print(String(format: "DuoFX GPU 3024x1964 %@ blur=%.0f: p50=%.3f p95=%.3f p99=%.3f ms", mode.rawValue, radius,
                          times[60], times[114], times[118]))
         }
     }

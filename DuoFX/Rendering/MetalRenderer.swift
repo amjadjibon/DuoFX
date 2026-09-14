@@ -34,6 +34,11 @@ struct RenderUniforms {
     var shadow: Float
     var edgeSoftness: Float
     var isOverlay: UInt32
+    var direction: UInt32
+    var isFold: UInt32
+    var foldShadow: Float
+    var foldWidth: Float
+    var foldBlurRadius: Float
 }
 
 /// Submission is thread-safe. Rendering and configuration run on the main thread.
@@ -49,6 +54,7 @@ final class MetalRenderer: NSObject, MTKViewDelegate, @unchecked Sendable {
     private var latestFrame: CapturedTexture?
     private let inFlight = DispatchSemaphore(value: 3)
     private var blurTexture: MTLTexture?
+    private var foldTexture: MTLTexture?
     private var blur: MPSImageGaussianBlur?
     private var blurSigma: Float = -1
     var configuration = EffectConfiguration()
@@ -72,6 +78,7 @@ final class MetalRenderer: NSObject, MTKViewDelegate, @unchecked Sendable {
         pipeline = try device.makeRenderPipelineState(descriptor: descriptor)
         let samplerDescriptor = MTLSamplerDescriptor()
         samplerDescriptor.minFilter = .linear; samplerDescriptor.magFilter = .linear
+        samplerDescriptor.mipFilter = .linear
         samplerDescriptor.sAddressMode = .clampToEdge; samplerDescriptor.tAddressMode = .clampToEdge
         guard let sampler = device.makeSamplerState(descriptor: samplerDescriptor) else { throw RendererError.allocation }
         self.sampler = sampler
@@ -102,7 +109,7 @@ final class MetalRenderer: NSObject, MTKViewDelegate, @unchecked Sendable {
 
     func clear() {
         frameLock.lock(); latestFrame = nil; frameLock.unlock()
-        blurTexture = nil; blur = nil; blurSigma = -1
+        blurTexture = nil; foldTexture = nil; blur = nil; blurSigma = -1
     }
 
     func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {}
@@ -141,9 +148,27 @@ final class MetalRenderer: NSObject, MTKViewDelegate, @unchecked Sendable {
         pass.colorAttachments[0].loadAction = .clear
         pass.colorAttachments[0].storeAction = .store
         var texture = frame.texture
-        // The blur's coverage moves with the lid; its radius stays constant.
+        // Soft fold samples continuously varying radii from a GPU mip pyramid.
+        // Sweep retains its constant Gaussian radius. Neither path moves UVs.
         let sigma = (Float(c.blurStrength) * 2).rounded() / 2
-        if p > 0 && sigma >= 0.5 {
+        if c.animationMode == .fold && p > 0 && c.blurStrength > 0 {
+            if foldTexture?.width != texture.width || foldTexture?.height != texture.height ||
+                foldTexture?.pixelFormat != texture.pixelFormat {
+                let descriptor = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: texture.pixelFormat,
+                    width: texture.width, height: texture.height, mipmapped: true)
+                descriptor.usage = .shaderRead; descriptor.storageMode = .private
+                foldTexture = device.makeTexture(descriptor: descriptor)
+            }
+            guard let pyramid = foldTexture, let blit = command.makeBlitCommandEncoder() else {
+                throw RendererError.allocation
+            }
+            blit.copy(from: texture, sourceSlice: 0, sourceLevel: 0, sourceOrigin: MTLOrigin(),
+                      sourceSize: MTLSize(width: texture.width, height: texture.height, depth: 1),
+                      to: pyramid, destinationSlice: 0, destinationLevel: 0, destinationOrigin: MTLOrigin())
+            blit.generateMipmaps(for: pyramid)
+            blit.endEncoding()
+            texture = pyramid
+        } else if c.animationMode == .sweep && p > 0 && sigma >= 0.5 {
             if blurTexture?.width != texture.width || blurTexture?.height != texture.height {
                 let descriptor = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: .bgra8Unorm,
                     width: texture.width, height: texture.height, mipmapped: false)
@@ -160,7 +185,10 @@ final class MetalRenderer: NSObject, MTKViewDelegate, @unchecked Sendable {
         }
         guard let encoder = command.makeRenderCommandEncoder(descriptor: pass) else { throw RendererError.allocation }
         var uniforms = RenderUniforms(progress: p, opacity: opacity,
-            shadow: Float(c.shadowStrength), edgeSoftness: Float(c.edgeSoftness), isOverlay: isOverlay ? 1 : 0)
+            shadow: Float(c.shadowStrength), edgeSoftness: Float(c.edgeSoftness), isOverlay: isOverlay ? 1 : 0,
+            direction: c.sweepDirection.shaderValue, isFold: c.animationMode == .fold ? 1 : 0,
+            foldShadow: Float(c.foldShadow), foldWidth: Float(c.foldWidth),
+            foldBlurRadius: Float(c.blurStrength) * 2.4)
         encoder.setRenderPipelineState(pipeline)
         encoder.setVertexBuffer(mesh, offset: 0, index: 0)
         encoder.setFragmentBytes(&uniforms, length: MemoryLayout<RenderUniforms>.stride, index: 0)

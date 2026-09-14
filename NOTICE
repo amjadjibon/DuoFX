@@ -11,3 +11,11 @@ The full license is included in Licenses/LidAngleSensor.txt.
 Changed for DuoFX: serial queue ownership, bounded report validation, asynchronous
 diagnostic delivery, repeated-read failure handling, and lifecycle integration.
 No audio, branding, UI, or media assets from that project are included.
+
+The variable-radius blur sampler and progressive shading in Shaders.metal are
+adapted from iphone-duo by jadon7 (Copyright 2026, MIT License).
+https://github.com/chuspeeism/iphone-duo/blob/main/main.js
+The full license is included in DuoFX/Resources/IPhoneDuoLicense.txt and bundled
+with the app. DuoFX uses a moving top-to-bottom transition, fixed desktop UVs,
+clamped screen edges, and configurable blur, shadow, and transition width.
+No phone models, Apple imagery, or other media from that project are included.

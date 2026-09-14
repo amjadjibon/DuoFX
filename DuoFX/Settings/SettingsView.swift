@@ -111,7 +111,7 @@ struct SettingsView: View {
                 } else {
                     MetalPreview(configuration: model.configuration, progress: progress,
                                  easesChanges: !followsLid && !reduceMotion, error: $previewError)
-                        .accessibilityLabel("Sample desktop, blur covers \(Int(progress * 100)) percent from the top")
+                        .accessibilityLabel("Sample desktop, \(model.configuration.sweepDirection.title), blur progress \(Int(progress * 100)) percent")
                 }
             }
             .aspectRatio(1.5, contentMode: .fit)
@@ -151,6 +151,27 @@ struct SettingsView: View {
     private var appearanceControls: some View {
         Group {
             VStack(alignment: .leading, spacing: 12) {
+                sectionHeading("Animation", detail: "Choose how the blur moves across your desktop.")
+                Picker("Animation", selection: $model.configuration.animationMode) {
+                    Text("Blur sweep").tag(AnimationMode.sweep)
+                    Text("Soft fold").tag(AnimationMode.fold)
+                }.pickerStyle(.segmented).labelsHidden()
+                Picker("Direction", selection: $model.configuration.sweepDirection) {
+                    ForEach(SweepDirection.allCases) { Text($0.title).tag($0) }
+                }
+                Button("Use reference look") { model.configuration.applyFoldReference() }
+                    .help("Progressive blur and shadow inspired by iPhone Duo, flowing top to bottom.")
+                if model.configuration.animationMode == .fold {
+                    Text("Blur builds behind the moving edge as you close the lid, followed by a deepening shadow. Your desktop stays in place.")
+                        .font(.caption).foregroundStyle(.secondary)
+                    adjustment("Fold shadow", detail: "Darken the area behind the moving blur", value: $model.configuration.foldShadow,
+                               range: 0...1, display: percent(model.configuration.foldShadow))
+                    adjustment("Transition width", detail: "Higher values spread the blur and shadow", value: $model.configuration.foldWidth,
+                               range: 0.04...0.35, display: percent(model.configuration.foldWidth))
+                }
+            }
+            Divider()
+            VStack(alignment: .leading, spacing: 12) {
                 sectionHeading("Your look", detail: "Choose a starting point, then make it yours.")
                 ForEach(EffectStyle.allCases) { style in
                     styleButton(style)
@@ -161,7 +182,8 @@ struct SettingsView: View {
             Divider()
             VStack(spacing: 20) {
                 adjustment("Blur", detail: "How soft the covered area becomes", value: $model.configuration.blurStrength,
-                           range: 0...30, display: "\(Int(model.configuration.blurStrength.rounded())) px")
+                           range: 0...30, display: model.configuration.animationMode == .fold
+                           ? percent(model.configuration.blurStrength / 30) : "\(Int(model.configuration.blurStrength.rounded())) px")
                 adjustment("Soft edge", detail: "Blend the boundary into your desktop", value: $model.configuration.edgeSoftness,
                            range: 0.02...0.3, display: percent(model.configuration.edgeSoftness))
                 adjustment("Dimming", detail: "Shade the blurred area gently", value: $model.configuration.shadowStrength,

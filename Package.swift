@@ -11,7 +11,8 @@ let package = Package(
             name: "DuoFX", dependencies: ["DuoFXCore"], path: "DuoFX",
             exclude: ["Models", "Info.plist"],
             resources: [.copy("Rendering/Shaders.metal"), .copy("Resources/Preview.png"),
-                        .copy("Resources/DuoFX.icns"), .copy("Resources/Sounds")],
+                        .copy("Resources/DuoFX.icns"), .copy("Resources/Sounds"),
+                        .copy("Resources/IPhoneDuoLicense.txt")],
             linkerSettings: [
                 .linkedFramework("ScreenCaptureKit"), .linkedFramework("MetalKit"),
                 .linkedFramework("MetalPerformanceShaders"), .linkedFramework("IOKit")

@@ -43,6 +43,10 @@ The original whoosh assets are bundled with the app and can be regenerated with 
 
 For a gentle sweep, use **Settings → Effect → Use recommended settings**: 18 px blur, 0.22 edge softness, 0.18 dimming, 0.20 s motion easing, and 25% sound volume. The preset preserves your working/minimum lid angles and whether sound is enabled. Dimming is scaled by the shader, so this setting darkens the fully blurred region by about 6%. The easing value controls response rather than a fixed animation duration; the sweep settles about 95% of the way to a new lid angle in 0.47 seconds. Increase **Motion easing** for a slower feel or reduce it for a quicker response.
 
+**Settings → Effect → Animation** offers **Blur sweep** and **Soft fold**. Soft fold adapts the progressive blur and darkening from [iPhone Duo](https://iphone-duo-tawny.vercel.app/) to a moving top-to-bottom transition. Blur increases continuously behind the leading edge, followed by a deeper shadow as the lid closes. Desktop coordinates remain fixed. **Direction** supports all four edges; opening the lid reverses the same path. **Fold shadow** adjusts darkness, including black at high strength, and **Transition width** spreads the blur/shadow gradient. Blur, soft edge, dimming, and motion easing remain adjustable in either mode.
+
+**Use reference look** selects Soft fold moving top to bottom, with 100% blur intensity (up to a 72-source-pixel sampling radius), 20% soft edge, 70% fold shadow, 24% transition width, no extra dimming, and 0.28 s easing. It preserves lid calibration and sound preferences. **Use recommended settings** returns to the original top-to-bottom Cinematic Frost sweep. Existing saved configurations retain their chosen animation and settings. The adapted sampler's MIT license is bundled as `IPhoneDuoLicense.txt`; phone models and reference media are not included.
+
 Visible animation follows Metal's display refresh callbacks, requesting up to 120 FPS on supported displays. Sensor/capture sampling remains at 60 Hz; intermediate animation frames use continuous easing. A timer keeps lid detection running when the overlay is hidden or drawing stops. The desktop stays fixed as the blur boundary moves.
 
 ### Permission enabled but capture still denied
@@ -53,7 +57,7 @@ When upgrading from an old build, quit DuoFX, remove its existing entry from **S
 
 ## Included
 
-- A fixed full-screen Metal quad with MPS Gaussian blur and a soft boundary that travels from top to bottom. Opening the lid reverses the sweep. Settings control blur radius, edge softness, and dimming of the blurred area.
+- A fixed full-screen Metal quad with MPS Gaussian blur for Blur sweep and a GPU mip pyramid with variable-radius sampling for Soft fold. Both use a soft moving boundary; opening the lid reverses the same path. Settings control blur, edge softness, shading, direction, and motion easing.
 - Silk, Shade, and Frost presets; working/minimum angle calibration; persisted appearance and input choices. Enabling is intentionally not persisted.
 - A deterministic bundled PNG for permission-free development and an embedded Metal preview that only redraws when settings change.
 - Built-in-display-only ScreenCaptureKit capture at up to 60 FPS, BGRA IOSurface textures, complete-frame filtering, no cursor or audio, and exclusion of every DuoFX window.
@@ -75,7 +79,7 @@ Tests cover mapping boundaries, smoothing/velocity, hysteresis, blur coverage, r
 
 To render open, half-closed, and closed snapshots of the bundled fixture, run `DUOFX_PREVIEW_SNAPSHOTS=/tmp/duofx-preview swift test --filter RenderingTests`. Only the bundled test image is saved; captured desktop content is never used by these tests.
 
-`DUOFX_RENDER_BENCHMARK=1 swift test --filter RenderingPerformanceTests` reports GPU p50/p95/p99 times for a synthetic 3024×1964 frame at blur radii 0, 12, and 18. This measures rendering cost, not achieved onscreen FPS or capture latency.
+`DUOFX_RENDER_BENCHMARK=1 swift test --filter RenderingPerformanceTests` reports GPU p50/p95/p99 times for a synthetic 3024×1964 frame at sweep blur radii 0, 12, and 18, plus Soft fold at maximum blur. This measures rendering cost, not achieved onscreen FPS or capture latency.
 
 To additionally probe the physical lid sensor, run `DUOFX_HARDWARE_TESTS=1 swift test --filter HardwareTests`. This samples the sensor briefly without moving the lid, requesting capture permission, or showing an overlay. It reports an explicit skip for unsupported hardware.
 

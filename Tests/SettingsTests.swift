@@ -16,6 +16,10 @@ final class SettingsTests: XCTestCase {
         first.configuration.soundEnabled = true
         first.configuration.soundVolume = 0.65
         first.configuration.motionResponse = 0.28
+        first.configuration.animationMode = .fold
+        first.configuration.sweepDirection = .left
+        first.configuration.foldShadow = 0.7
+        first.configuration.foldWidth = 0.25
         first.configuration.apply(.shade)
         first.angleSource = .sensor; first.desktopSource = .liveDesktop
         first.isEnabled = true
@@ -24,6 +28,10 @@ final class SettingsTests: XCTestCase {
         XCTAssertTrue(second.configuration.soundEnabled)
         XCTAssertEqual(second.configuration.soundVolume, 0.65)
         XCTAssertEqual(second.configuration.motionResponse, 0.28)
+        XCTAssertEqual(second.configuration.animationMode, .fold)
+        XCTAssertEqual(second.configuration.sweepDirection, .left)
+        XCTAssertEqual(second.configuration.foldShadow, 0.7)
+        XCTAssertEqual(second.configuration.foldWidth, 0.25)
         XCTAssertEqual(second.configuration.style, .shade)
         XCTAssertEqual(second.angleSource, .sensor)
         XCTAssertEqual(second.desktopSource, .liveDesktop)
@@ -60,6 +68,8 @@ final class SettingsTests: XCTestCase {
         XCTAssertFalse(model.configuration.soundEnabled)
         XCTAssertEqual(model.configuration.soundVolume, 0.25)
         XCTAssertEqual(model.configuration.motionResponse, 0.20)
+        XCTAssertEqual(model.configuration.animationMode, .sweep)
+        XCTAssertEqual(model.configuration.sweepDirection, .down)
         model.configuration.edgeSoftness = 0.2
         XCTAssertEqual(AppModel(defaults: defaults).configuration.edgeSoftness, 0.2)
     }

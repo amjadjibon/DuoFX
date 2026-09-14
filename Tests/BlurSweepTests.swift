@@ -52,4 +52,30 @@ final class BlurSweepTests: XCTestCase {
         XCTAssertEqual(c.minimumAngle, 30)
         XCTAssertTrue(c.soundEnabled)
     }
+
+    func testFoldReferencePreservesCalibrationAndSoundAndValidatesShadow() {
+        var c = EffectConfiguration()
+        c.workingAngle = 115; c.minimumAngle = 30; c.soundEnabled = true; c.soundVolume = 0.6
+        c.applyFoldReference()
+        XCTAssertEqual(c.animationMode, .fold)
+        XCTAssertEqual(c.sweepDirection, .down)
+        XCTAssertEqual(c.workingAngle, 115)
+        XCTAssertEqual(c.minimumAngle, 30)
+        XCTAssertTrue(c.soundEnabled)
+        XCTAssertEqual(c.soundVolume, 0.6)
+        XCTAssertEqual(c.blurStrength, 30)
+        XCTAssertEqual(c.foldShadow, 0.70)
+        XCTAssertEqual(c.foldWidth, 0.24)
+        XCTAssertEqual(c.motionResponse, 0.28)
+        XCTAssertEqual(c.validated(), c)
+        c.foldWidth = 0; c.foldShadow = 2
+        XCTAssertEqual(c.validated().foldWidth, 0.04)
+        XCTAssertEqual(c.validated().foldShadow, 1)
+        c.foldWidth = .nan; c.foldShadow = .infinity
+        XCTAssertEqual(c.validated().foldWidth, 0.18)
+        XCTAssertEqual(c.validated().foldShadow, 0.55)
+        c.applyRecommended()
+        XCTAssertEqual(c.animationMode, .sweep)
+        XCTAssertEqual(c.sweepDirection, .down)
+    }
 }

@@ -29,6 +29,27 @@ public enum DesktopSource: String, CaseIterable, Identifiable, Codable, Sendable
     public var id: Self { self }
 }
 
+public enum AnimationMode: String, CaseIterable, Identifiable, Codable, Sendable {
+    case sweep, fold
+    public var id: Self { self }
+}
+
+public enum SweepDirection: String, CaseIterable, Identifiable, Codable, Sendable {
+    case down, up, right, left
+    public var id: Self { self }
+    public var title: String {
+        switch self {
+        case .down: "Top to bottom"
+        case .up: "Bottom to top"
+        case .right: "Left to right"
+        case .left: "Right to left"
+        }
+    }
+    public var shaderValue: UInt32 {
+        switch self { case .down: 0; case .up: 1; case .right: 2; case .left: 3 }
+    }
+}
+
 public struct EffectConfiguration: Codable, Equatable, Sendable {
     public var style: EffectStyle = .frost
     public var workingAngle = 95.0
@@ -37,6 +58,10 @@ public struct EffectConfiguration: Codable, Equatable, Sendable {
     public var blurStrength = 18.0
     public var shadowStrength = 0.18
     public var motionResponse = 0.20
+    public var animationMode: AnimationMode = .sweep
+    public var sweepDirection: SweepDirection = .down
+    public var foldShadow = 0.55
+    public var foldWidth = 0.18
     public var soundEnabled = false
     public var soundVolume = 0.25
     public init() {}
@@ -44,6 +69,7 @@ public struct EffectConfiguration: Codable, Equatable, Sendable {
     private enum CodingKeys: String, CodingKey {
         case style, workingAngle, minimumAngle, edgeSoftness, blurStrength, shadowStrength
         case soundEnabled, soundVolume, motionResponse
+        case animationMode, sweepDirection, foldShadow, foldWidth
     }
 
     public init(from decoder: Decoder) throws {
@@ -59,6 +85,10 @@ public struct EffectConfiguration: Codable, Equatable, Sendable {
         motionResponse = try values.decodeIfPresent(Double.self, forKey: .motionResponse) ?? 0.20
         soundEnabled = try values.decodeIfPresent(Bool.self, forKey: .soundEnabled) ?? false
         soundVolume = try values.decodeIfPresent(Double.self, forKey: .soundVolume) ?? 0.25
+        animationMode = try values.decodeIfPresent(AnimationMode.self, forKey: .animationMode) ?? .sweep
+        sweepDirection = try values.decodeIfPresent(SweepDirection.self, forKey: .sweepDirection) ?? .down
+        foldShadow = try values.decodeIfPresent(Double.self, forKey: .foldShadow) ?? 0.55
+        foldWidth = try values.decodeIfPresent(Double.self, forKey: .foldWidth) ?? 0.18
     }
 
     public func validated() -> Self {
@@ -70,6 +100,8 @@ public struct EffectConfiguration: Codable, Equatable, Sendable {
         copy.shadowStrength = clamp(shadowStrength, 0...1, fallback: 0.18)
         copy.soundVolume = clamp(soundVolume, 0...1, fallback: 0.25)
         copy.motionResponse = clamp(motionResponse, 0.08...0.4, fallback: 0.20)
+        copy.foldShadow = clamp(foldShadow, 0...1, fallback: 0.55)
+        copy.foldWidth = clamp(foldWidth, 0.04...0.35, fallback: 0.18)
         return copy
     }
 
@@ -83,8 +115,16 @@ public struct EffectConfiguration: Codable, Equatable, Sendable {
 
     public mutating func applyRecommended() {
         apply(.frost)
+        animationMode = .sweep; sweepDirection = .down
         motionResponse = 0.20
         soundVolume = 0.25
+    }
+
+    public mutating func applyFoldReference() {
+        apply(.frost)
+        animationMode = .fold; sweepDirection = .down
+        blurStrength = 30; edgeSoftness = 0.20; shadowStrength = 0
+        foldShadow = 0.70; foldWidth = 0.24; motionResponse = 0.28
     }
 }
 

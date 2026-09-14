@@ -1,0 +1,130 @@
+#!/usr/bin/env python3
+"""Exercise release orchestration with fake GitHub/build tools; never publish."""
+import hashlib
+import json
+import os
+from pathlib import Path
+import plistlib
+import shutil
+import subprocess
+import tempfile
+import unittest
+
+SOURCE = Path(__file__).with_name("release.sh")
+HEAD = "a" * 40
+
+
+class ReleaseTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name)
+        for folder in ("scripts", "DuoFX", "bin"):
+            (self.root / folder).mkdir()
+        shutil.copy(SOURCE, self.root / "scripts/release.sh")
+        (self.root / "DuoFX/Info.plist").write_bytes(plistlib.dumps({"CFBundleShortVersionString": "0.1.0"}))
+        (self.root / "scripts/package.sh").write_text('''#!/bin/bash
+set -eu
+test "${FAIL_BUILD:-0}" = 0
+mkdir -p build/Build/Products/Release/DuoFX.app/Contents
+cp DuoFX/Info.plist build/Build/Products/Release/DuoFX.app/Contents/Info.plist
+printf 'fixture dmg' > build/DuoFX.dmg
+''')
+        stub = '''#!/usr/bin/env python3
+import json, os, sys
+from pathlib import Path
+tool = Path(sys.argv[0]).name
+args = sys.argv[1:]
+with open(os.environ["CALLS"], "a") as log:
+    log.write(json.dumps([tool, *args]) + "\\n")
+if tool == "git":
+    if args[0] == "rev-parse": print("a" * 40)
+    elif args[0] == "status": print(" M changed" if os.getenv("DIRTY") else "")
+    elif args[:2] == ["remote", "get-url"]: print("git@github.com:owner/DuoFX.git")
+    elif args[0] == "ls-remote":
+        if os.getenv("TAG_MISMATCH"): print("b" * 40 + "\\trefs/tags/v0.1.0")
+        elif os.getenv("ANNOTATED_TAG"):
+            print("b" * 40 + "\\trefs/tags/v0.1.0")
+            print("a" * 40 + "\\trefs/tags/v0.1.0^{}")
+        elif os.getenv("REMOTE_FAILURE"): sys.exit(1)
+    else: sys.exit(90)
+elif tool == "gh":
+    if args[:2] == ["release", "view"]: sys.exit(0 if os.getenv("EXISTS") else 1)
+    if args[0] == "api" and os.getenv("UNPUSHED"): sys.exit(1)
+    if args[:2] == ["release", "create"] and os.getenv("FAIL_UPLOAD"): sys.exit(1)
+elif tool != "codesign": sys.exit(91)
+'''
+        for tool in ("git", "gh", "codesign"):
+            path = self.root / "bin" / tool
+            path.write_text(stub)
+            path.chmod(0o755)
+        self.env = dict(os.environ, PATH=f'{self.root / "bin"}:{os.environ["PATH"]}', CALLS=str(self.root / "calls"))
+
+    def run_release(self, *args, **environment):
+        return subprocess.run(["/bin/bash", str(self.root / "scripts/release.sh"), *args],
+                              env=dict(self.env, **environment), text=True, capture_output=True)
+
+    def calls(self):
+        path = self.root / "calls"
+        return [json.loads(line) for line in path.read_text().splitlines()] if path.exists() else []
+
+    def test_release_builds_named_assets_and_targets_head(self):
+        result = self.run_release()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        command = next(call for call in self.calls() if call[:3] == ["gh", "release", "create"])
+        self.assertEqual(command[3], "v0.1.0")
+        self.assertEqual(command[command.index("--target") + 1], HEAD)
+        self.assertIn("--generate-notes", command)
+        self.assertNotIn("--draft", command)
+        description = (self.root / command[command.index("--notes-file") + 1]).read_text()
+        self.assertIn("Apple silicon Macs (M-series, arm64)", description)
+        self.assertIn("macOS 14 Sonoma or later", description)
+        self.assertIn("not support Intel Macs", description)
+        self.assertIn("compatible lid-angle sensor", description)
+        checksum = self.root / "build/DuoFX-v0.1.0-arm64.dmg.sha256"
+        self.assertEqual(checksum.read_text().split(), [hashlib.sha256(b"fixture dmg").hexdigest(), "DuoFX-v0.1.0-arm64.dmg"])
+
+    def test_draft_prerelease_and_notes_path_with_spaces(self):
+        notes = self.root / "release notes.md"
+        notes.write_text("Exact release notes.\n")
+        result = self.run_release("v0.1.0-beta.1", "--draft", "--notes-file", str(notes))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        command = self.calls()[-1]
+        self.assertIn("--draft", command)
+        self.assertIn("--prerelease", command)
+        description = (self.root / command[command.index("--notes-file") + 1]).read_text()
+        self.assertIn("Apple silicon Macs", description)
+        self.assertTrue(description.endswith("Exact release notes.\n"))
+        self.assertEqual(notes.read_text(), "Exact release notes.\n")
+        self.assertNotIn("--generate-notes", command)
+
+    def test_dry_run_never_builds_or_contacts_github(self):
+        result = self.run_release("--dry-run", DIRTY="1")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertFalse((self.root / "build").exists())
+        self.assertFalse(any(call[0] == "gh" for call in self.calls()))
+
+    def test_annotated_tag_at_head_is_accepted(self):
+        result = self.run_release(ANNOTATED_TAG="1")
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_preflight_failures_never_publish(self):
+        for condition in ("DIRTY", "TAG_MISMATCH", "EXISTS", "UNPUSHED", "REMOTE_FAILURE", "FAIL_BUILD"):
+            with self.subTest(condition=condition):
+                result = self.run_release(**{condition: "1"})
+                self.assertNotEqual(result.returncode, 0)
+                self.assertFalse(any(call[:3] == ["gh", "release", "create"] for call in self.calls()))
+
+    def test_invalid_arguments_never_publish(self):
+        for args in [("v9.0.0",), ("bad-tag",), ("--unknown",), ("--notes-file",), ("--notes-file", "/does/not/exist")]:
+            with self.subTest(args=args):
+                self.assertNotEqual(self.run_release(*args).returncode, 0)
+                self.assertFalse(any(call[0] == "gh" for call in self.calls()))
+
+    def test_upload_failure_is_reported_without_retrying(self):
+        self.assertNotEqual(self.run_release(FAIL_UPLOAD="1").returncode, 0)
+        self.assertEqual(sum(call[:3] == ["gh", "release", "create"] for call in self.calls()), 1)
+
+
+if __name__ == "__main__":
+    unittest.main()

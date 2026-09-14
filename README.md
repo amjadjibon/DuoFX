@@ -126,6 +126,25 @@ To install an existing DMG without rebuilding, use `./scripts/install.sh build/D
 
 For distribution, use your Apple Developer team and Developer ID Application certificate in Xcode, archive the Release scheme, export with Developer ID signing and hardened runtime, notarize with `xcrun notarytool submit --wait`, and staple with `xcrun stapler staple`. Create a DMG from that signed and stapled app and validate it on another supported Mac. Developer ID signing, notarization, and installation on a second Mac require credentials/hardware and are not performed by the local packaging script. Launch at login and sound effects are not included.
 
+## GitHub releases
+
+Use `scripts/release.sh` on your build Mac with Xcode, the existing signing setup, and [GitHub CLI](https://cli.github.com/manual/gh_release_create). Set `CFBundleShortVersionString` and increment `CFBundleVersion` in `DuoFX/Info.plist` for a new version, then commit and push your changes to `origin`.
+
+```bash
+gh auth login
+git push origin HEAD
+./scripts/release.sh --dry-run
+./scripts/release.sh --draft
+```
+
+Omit `--draft` to publish immediately. The tag defaults to the app version (currently `v0.1.0`). You can pass an explicit matching tag, use `--prerelease`, or supply notes with `--notes-file /path/to/release-notes.md`; otherwise GitHub generates release notes. For example, `./scripts/release.sh v0.1.0-beta.1 --draft` creates a draft prerelease.
+
+Every release description starts with compatibility details: Apple silicon (M-series, arm64), macOS 14 Sonoma or later, no Intel support in this DMG, and model-dependent MacBook lid-sensor availability. Custom notes are appended after that section; generated GitHub notes follow it when no notes file is supplied. The prepared description is saved as `build/DuoFX-<tag>-release-notes.md`.
+
+The script rebuilds the DMG, checks the signature and app version, and uploads `DuoFX-v0.1.0-arm64.dmg` plus its `.sha256` checksum. It requires a clean checkout and a commit present on GitHub, creates the release tag at that exact commit if needed, and rejects existing releases or tags pointing elsewhere. It does not install the app or change your source version. If an upload fails and GitHub leaves a draft behind, inspect that draft before retrying; the script never replaces assets automatically.
+
+Signing and notarization are the same as `scripts/package.sh`: uploading to GitHub does not notarize the app. `--dry-run` prints the plan without building or accessing GitHub. Run `python3 scripts/test-release.py` to test release orchestration with fake build/GitHub commands; no release is published by those tests.
+
 ## Attribution
 
 HID matching constants and the feature-report reader are adapted from [Sam Gold's LidAngleSensor](https://github.com/samhenrigold/LidAngleSensor), under Apache-2.0. See [NOTICE](NOTICE) and [the original license](Licenses/LidAngleSensor.txt), both included in the app bundle. Other implementation and the bundled preview image are original to DuoFX.

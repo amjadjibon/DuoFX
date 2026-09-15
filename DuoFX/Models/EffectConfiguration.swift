@@ -32,6 +32,9 @@ public enum DesktopSource: String, CaseIterable, Identifiable, Codable, Sendable
 public enum AnimationMode: String, CaseIterable, Identifiable, Codable, Sendable {
     case sweep, fold, perspective
     public var id: Self { self }
+    public var shaderValue: UInt32 {
+        switch self { case .sweep: 0; case .fold: 1; case .perspective: 2 }
+    }
 }
 
 public enum SweepDirection: String, CaseIterable, Identifiable, Codable, Sendable {
@@ -75,39 +78,41 @@ public struct EffectConfiguration: Codable, Equatable, Sendable {
     }
 
     public init(from decoder: Decoder) throws {
+        self.init()
         let values = try decoder.container(keyedBy: CodingKeys.self)
-        style = try values.decodeIfPresent(EffectStyle.self, forKey: .style) ?? .frost
-        workingAngle = try values.decodeIfPresent(Double.self, forKey: .workingAngle) ?? 95
-        minimumAngle = try values.decodeIfPresent(Double.self, forKey: .minimumAngle) ?? 25
+        style = try values.decodeIfPresent(EffectStyle.self, forKey: .style) ?? style
+        workingAngle = try values.decodeIfPresent(Double.self, forKey: .workingAngle) ?? workingAngle
+        minimumAngle = try values.decodeIfPresent(Double.self, forKey: .minimumAngle) ?? minimumAngle
         // Older installations have folding parameters but no blur-edge setting.
         // Keep their calibration and appearance instead of resetting all preferences.
-        edgeSoftness = try values.decodeIfPresent(Double.self, forKey: .edgeSoftness) ?? 0.22
-        blurStrength = try values.decodeIfPresent(Double.self, forKey: .blurStrength) ?? 18
-        shadowStrength = try values.decodeIfPresent(Double.self, forKey: .shadowStrength) ?? 0.18
-        motionResponse = try values.decodeIfPresent(Double.self, forKey: .motionResponse) ?? 0.20
-        soundEnabled = try values.decodeIfPresent(Bool.self, forKey: .soundEnabled) ?? false
-        soundVolume = try values.decodeIfPresent(Double.self, forKey: .soundVolume) ?? 0.25
-        animationMode = try values.decodeIfPresent(AnimationMode.self, forKey: .animationMode) ?? .sweep
-        sweepDirection = try values.decodeIfPresent(SweepDirection.self, forKey: .sweepDirection) ?? .down
-        foldShadow = try values.decodeIfPresent(Double.self, forKey: .foldShadow) ?? 0.55
-        foldWidth = try values.decodeIfPresent(Double.self, forKey: .foldWidth) ?? 0.18
-        perspectiveStrength = try values.decodeIfPresent(Double.self, forKey: .perspectiveStrength) ?? 0.55
-        perspectiveFeather = try values.decodeIfPresent(Double.self, forKey: .perspectiveFeather) ?? 0.06
+        edgeSoftness = try values.decodeIfPresent(Double.self, forKey: .edgeSoftness) ?? edgeSoftness
+        blurStrength = try values.decodeIfPresent(Double.self, forKey: .blurStrength) ?? blurStrength
+        shadowStrength = try values.decodeIfPresent(Double.self, forKey: .shadowStrength) ?? shadowStrength
+        motionResponse = try values.decodeIfPresent(Double.self, forKey: .motionResponse) ?? motionResponse
+        soundEnabled = try values.decodeIfPresent(Bool.self, forKey: .soundEnabled) ?? soundEnabled
+        soundVolume = try values.decodeIfPresent(Double.self, forKey: .soundVolume) ?? soundVolume
+        animationMode = try values.decodeIfPresent(AnimationMode.self, forKey: .animationMode) ?? animationMode
+        sweepDirection = try values.decodeIfPresent(SweepDirection.self, forKey: .sweepDirection) ?? sweepDirection
+        foldShadow = try values.decodeIfPresent(Double.self, forKey: .foldShadow) ?? foldShadow
+        foldWidth = try values.decodeIfPresent(Double.self, forKey: .foldWidth) ?? foldWidth
+        perspectiveStrength = try values.decodeIfPresent(Double.self, forKey: .perspectiveStrength) ?? perspectiveStrength
+        perspectiveFeather = try values.decodeIfPresent(Double.self, forKey: .perspectiveFeather) ?? perspectiveFeather
     }
 
     public func validated() -> Self {
         var copy = self
-        copy.workingAngle = clamp(workingAngle, 40...140, fallback: 95)
-        copy.minimumAngle = clamp(minimumAngle, 0...(copy.workingAngle - 5), fallback: 25)
-        copy.edgeSoftness = clamp(edgeSoftness, 0.02...0.3, fallback: 0.22)
-        copy.blurStrength = clamp(blurStrength, 0...30, fallback: 18)
-        copy.shadowStrength = clamp(shadowStrength, 0...1, fallback: 0.18)
-        copy.soundVolume = clamp(soundVolume, 0...1, fallback: 0.25)
-        copy.motionResponse = clamp(motionResponse, 0.08...0.4, fallback: 0.20)
-        copy.foldShadow = clamp(foldShadow, 0...1, fallback: 0.55)
-        copy.foldWidth = clamp(foldWidth, 0.04...0.35, fallback: 0.18)
-        copy.perspectiveStrength = clamp(perspectiveStrength, 0...1, fallback: 0.55)
-        copy.perspectiveFeather = clamp(perspectiveFeather, 0...0.2, fallback: 0.06)
+        let defaults = Self()
+        copy.workingAngle = clamp(workingAngle, 40...140, fallback: defaults.workingAngle)
+        copy.minimumAngle = clamp(minimumAngle, 0...(copy.workingAngle - 5), fallback: defaults.minimumAngle)
+        copy.edgeSoftness = clamp(edgeSoftness, 0.02...0.3, fallback: defaults.edgeSoftness)
+        copy.blurStrength = clamp(blurStrength, 0...30, fallback: defaults.blurStrength)
+        copy.shadowStrength = clamp(shadowStrength, 0...1, fallback: defaults.shadowStrength)
+        copy.soundVolume = clamp(soundVolume, 0...1, fallback: defaults.soundVolume)
+        copy.motionResponse = clamp(motionResponse, 0.08...0.4, fallback: defaults.motionResponse)
+        copy.foldShadow = clamp(foldShadow, 0...1, fallback: defaults.foldShadow)
+        copy.foldWidth = clamp(foldWidth, 0.04...0.35, fallback: defaults.foldWidth)
+        copy.perspectiveStrength = clamp(perspectiveStrength, 0...1, fallback: defaults.perspectiveStrength)
+        copy.perspectiveFeather = clamp(perspectiveFeather, 0...0.2, fallback: defaults.perspectiveFeather)
         return copy
     }
 

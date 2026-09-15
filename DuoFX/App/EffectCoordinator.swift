@@ -7,7 +7,6 @@ import DuoFXCore
 @MainActor
 final class EffectCoordinator {
     private let model: AppModel
-    private let manual = ManualAngleSensor()
     private let sensor = HIDAngleSensor()
     private let capture: any ScreenCapturing
     private let overlay: any OverlayPresenting
@@ -25,7 +24,6 @@ final class EffectCoordinator {
     private var globalEscape: Any?
     private var suspensions: Set<String> = []
     private var source: AngleSource?
-    private var sensorRunning = false
     private var rawAngle = 95.0
     private var smoother = AngleSmoother()
     private var gate = VisibilityGate()
@@ -55,7 +53,6 @@ final class EffectCoordinator {
 
     func start() {
         observeSettings()
-        manual.onReading = { [weak self] in self?.rawAngle = $0 }
         sensor.onReading = { [weak self] in self?.rawAngle = $0 }
         sensor.onDiagnostic = { [weak self] diagnostic in
             guard let self else { return }
@@ -104,10 +101,9 @@ final class EffectCoordinator {
         if !active || !model.configuration.soundEnabled {
             sound.stop(); soundTrigger = LidSoundTrigger()
         }
-        manual.angle = model.manualAngle
         if !active || source != model.angleSource {
             sound.stop(); soundTrigger = LidSoundTrigger()
-            manual.stop(); sensor.stop(); sensorRunning = false; source = nil
+            sensor.stop(); source = nil
             timer?.invalidate(); timer = nil
             smoother = AngleSmoother(); gate = VisibilityGate()
         }
@@ -116,12 +112,11 @@ final class EffectCoordinator {
             model.status = model.isEnabled ? "Suspended while the screen is unavailable" : "Paused"
             return
         }
-        if !sensorRunning {
+        if source == nil {
             model.errorMessage = nil
-            source = model.angleSource; sensorRunning = true
+            source = model.angleSource
             rawAngle = model.configuration.workingAngle
-            if source == .manual { manual.start() }
-            else { model.status = "Checking lid sensor…"; sensor.start() }
+            if source == .sensor { model.status = "Checking lid sensor…"; sensor.start() }
             let timer = Timer(timeInterval: 1.0 / 60, repeats: true) { [weak self] _ in
                 MainActor.assumeIsolated {
                     guard let self else { return }
@@ -141,7 +136,8 @@ final class EffectCoordinator {
         guard model.isEnabled, suspensions.isEmpty, !shuttingDown else { return }
         let c = model.configuration.validated()
         let time = now()
-        let angle = smoother.update(rawAngle, at: time, response: c.motionResponse)
+        let inputAngle = source == .manual ? model.manualAngle : rawAngle
+        let angle = smoother.update(inputAngle, at: time, response: c.motionResponse)
         model.currentAngle = angle; model.velocity = smoother.velocity
         model.progress = closingProgress(angle: angle, workingAngle: c.workingAngle, minimumAngle: c.minimumAngle)
         var visibleProgress = model.progress
@@ -292,7 +288,7 @@ final class EffectCoordinator {
 
     private func installNotifications() {
         func watch(_ center: NotificationCenter, _ name: Notification.Name,
-                   _ action: @escaping @MainActor () -> Void) {
+                   _ action: @escaping @MainActor @Sendable () -> Void) {
             let observer = center.addObserver(forName: name, object: nil, queue: .main) { _ in
                 MainActor.assumeIsolated { action() }
             }
@@ -332,7 +328,7 @@ final class EffectCoordinator {
     func shutdown() async {
         shuttingDown = true; model.isEnabled = false
         sound.stop(); soundTrigger = LidSoundTrigger()
-        timer?.invalidate(); timer = nil; manual.stop(); sensor.stop()
+        timer?.invalidate(); timer = nil; sensor.stop()
         firstFrameTask?.cancel(); firstFrameTask = nil
         for (center, observer) in observers { center.removeObserver(observer) }
         observers.removeAll()

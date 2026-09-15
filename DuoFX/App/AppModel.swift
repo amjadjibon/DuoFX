@@ -36,12 +36,6 @@ final class AppModel {
 
     func pause() { isEnabled = false }
 
-    var inputSummary: String {
-        let input = angleSource == .sensor ? "Lid sensor" : "Manual slider"
-        let content = desktopSource == .liveDesktop ? "Live desktop" : "Bundled image"
-        return "\(input) · \(content)"
-    }
-
     private func persist() {
         if let data = try? JSONEncoder().encode(configuration.validated()) {
             defaults.set(data, forKey: "effectConfiguration")

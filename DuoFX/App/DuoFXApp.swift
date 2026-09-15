@@ -48,7 +48,7 @@ private struct MenuView: View {
         if let message = model.errorMessage { Text(message) }
         Divider()
         Button {
-            NSApplication.shared.activate(ignoringOtherApps: true)
+            NSApplication.shared.activate()
             openSettings()
         } label: {
             Label("Settings…", systemImage: "gear")

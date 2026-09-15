@@ -16,11 +16,7 @@ final class EffectSoundPlayer: EffectSoundPlaying {
     private let closing = EffectSoundPlayer.load(.closing)
 
     static func load(_ cue: LidSound) -> NSSound? {
-        #if SWIFT_PACKAGE
-        let bundle = Bundle.module
-        #else
-        let bundle = Bundle.main
-        #endif
+        let bundle = AppResources.bundle
         guard let url = bundle.url(forResource: cue.rawValue, withExtension: "wav", subdirectory: "Sounds")
                 ?? bundle.url(forResource: cue.rawValue, withExtension: "wav") else { return nil }
         return NSSound(contentsOf: url, byReference: false)

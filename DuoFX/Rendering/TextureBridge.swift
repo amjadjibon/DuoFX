@@ -1,7 +1,9 @@
 import CoreVideo
 import Metal
 
-struct CapturedTexture {
+// Immutable frame ownership crosses the capture and GPU-completion queues.
+// Consumers retain these Core Video handles; they never mutate the buffer.
+struct CapturedTexture: @unchecked Sendable {
     let texture: MTLTexture
     // Retain both owners until the GPU command buffer has completed.
     let reference: CVMetalTexture?

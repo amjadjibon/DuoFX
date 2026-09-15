@@ -5,15 +5,8 @@ import XCTest
 @testable import DuoFXCore
 
 final class RenderingTests: XCTestCase {
-    func testQuadCoversScreenWithCorrectTextureOrientation() {
-        let mesh = MeshFactory.fullScreenQuad()
-        XCTAssertEqual(mesh.count, 6)
-        XCTAssertEqual(mesh.first?.position, [-1, -1])
-        XCTAssertEqual(mesh.first?.uv, [0, 1])
-        XCTAssertEqual(mesh.last?.position, [-1, 1])
-        XCTAssertEqual(mesh.last?.uv, [0, 0])
-        XCTAssertEqual(MemoryLayout<MeshVertex>.stride, 16)
-        XCTAssertEqual(MemoryLayout<RenderUniforms>.stride, 52)
+    func testUniformLayoutMatchesShader() {
+        XCTAssertEqual(MemoryLayout<RenderUniforms>.stride, 48)
     }
 
     func testDesktopPixelsNeverMoveAtAnyLidAngle() throws {

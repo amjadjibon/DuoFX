@@ -7,8 +7,7 @@ import DuoFXCore
 #endif
 
 @MainActor
-final class HIDAngleSensor: LidAngleProviding {
-    private(set) var angle = 95.0
+final class HIDAngleSensor {
     private(set) var isAvailable = false
     var onReading: ((Double) -> Void)?
     var onDiagnostic: ((SensorDiagnostic) -> Void)?
@@ -27,7 +26,6 @@ final class HIDAngleSensor: LidAngleProviding {
                     self.onDiagnostic?(diagnostic)
                 }
                 if let reading {
-                    self.angle = reading
                     self.onReading?(reading)
                 }
             }

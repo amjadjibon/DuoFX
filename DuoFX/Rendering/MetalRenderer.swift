@@ -18,16 +18,6 @@ enum RendererError: LocalizedError {
     }
 }
 
-enum AppResources {
-    static var bundle: Bundle {
-        #if SWIFT_PACKAGE
-        .module
-        #else
-        .main
-        #endif
-    }
-}
-
 struct RenderUniforms {
     var progress: Float
     var opacity: Float
@@ -35,11 +25,10 @@ struct RenderUniforms {
     var edgeSoftness: Float
     var isOverlay: UInt32
     var direction: UInt32
-    var isFold: UInt32
+    var animation: UInt32
     var foldShadow: Float
     var foldWidth: Float
     var foldBlurRadius: Float
-    var isPerspective: UInt32
     var perspectiveStrength: Float
     var perspectiveFeather: Float
 }
@@ -50,8 +39,6 @@ final class MetalRenderer: NSObject, MTKViewDelegate, @unchecked Sendable {
     private let commandQueue: MTLCommandQueue
     private let pipeline: MTLRenderPipelineState
     private let sampler: MTLSamplerState
-    private let mesh: MTLBuffer
-    private let vertexCount: Int
     private let bridge: TextureBridge
     private let frameLock = NSLock()
     private var latestFrame: CapturedTexture?
@@ -85,11 +72,6 @@ final class MetalRenderer: NSObject, MTKViewDelegate, @unchecked Sendable {
         samplerDescriptor.sAddressMode = .clampToEdge; samplerDescriptor.tAddressMode = .clampToEdge
         guard let sampler = device.makeSamplerState(descriptor: samplerDescriptor) else { throw RendererError.allocation }
         self.sampler = sampler
-        let vertices = MeshFactory.fullScreenQuad()
-        vertexCount = vertices.count
-        guard let mesh = device.makeBuffer(bytes: vertices, length: vertices.count * MemoryLayout<MeshVertex>.stride,
-                                          options: .storageModeShared) else { throw RendererError.allocation }
-        self.mesh = mesh
         super.init()
     }
 
@@ -193,18 +175,16 @@ final class MetalRenderer: NSObject, MTKViewDelegate, @unchecked Sendable {
         guard let encoder = command.makeRenderCommandEncoder(descriptor: pass) else { throw RendererError.allocation }
         var uniforms = RenderUniforms(progress: p, opacity: opacity,
             shadow: Float(c.shadowStrength), edgeSoftness: Float(c.edgeSoftness), isOverlay: isOverlay ? 1 : 0,
-            direction: c.sweepDirection.shaderValue, isFold: c.animationMode != .sweep ? 1 : 0,
+            direction: c.sweepDirection.shaderValue, animation: c.animationMode.shaderValue,
             foldShadow: Float(c.foldShadow), foldWidth: Float(c.foldWidth),
             foldBlurRadius: Float(c.blurStrength) * 2.4,
-            isPerspective: c.animationMode == .perspective ? 1 : 0,
             perspectiveStrength: Float(c.perspectiveStrength), perspectiveFeather: Float(c.perspectiveFeather))
         encoder.setRenderPipelineState(pipeline)
-        encoder.setVertexBuffer(mesh, offset: 0, index: 0)
         encoder.setFragmentBytes(&uniforms, length: MemoryLayout<RenderUniforms>.stride, index: 0)
         encoder.setFragmentTexture(texture, index: 0)
         encoder.setFragmentTexture(frame.texture, index: 1)
         encoder.setFragmentSamplerState(sampler, index: 0)
-        encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: vertexCount)
+        encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 3)
         encoder.endEncoding()
     }
 }

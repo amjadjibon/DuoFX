@@ -82,6 +82,30 @@ final class LifecycleTests: XCTestCase {
         await coordinator.shutdown()
     }
 
+    func testManualInputUpdatesDirectlyAndStaysPaused() async throws {
+        var time = 100.0
+        let (model, _, overlay, coordinator, suite) = try fixture(now: { time })
+        defer { UserDefaults.standard.removePersistentDomain(forName: suite) }
+        model.desktopSource = .testImage
+        coordinator.start()
+        await waitUntil { overlay.showCount == 1 }
+        XCTAssertEqual(model.progress, 0.5)
+        let renderer = try XCTUnwrap(overlay.renderer)
+        model.manualAngle = 25
+        for _ in 0..<120 {
+            time += 1.0 / 120
+            renderer.onWillDraw?()
+        }
+        XCTAssertEqual(model.progress, 1, accuracy: 0.001)
+        coordinator.pause()
+        let pausedProgress = model.progress
+        model.manualAngle = 80
+        time += 1
+        renderer.onWillDraw?()
+        XCTAssertEqual(model.progress, pausedProgress)
+        await coordinator.shutdown()
+    }
+
     func testPerspectiveStartsUntransformedAfterWaitingForCapture() async throws {
         var time = 100.0
         let (model, capture, overlay, coordinator, suite) = try fixture(now: { time })

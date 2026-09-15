@@ -1,7 +1,6 @@
 #include <metal_stdlib>
 using namespace metal;
 
-struct MeshVertex { float2 position; float2 uv; };
 struct Uniforms {
     float progress;
     float opacity;
@@ -9,11 +8,10 @@ struct Uniforms {
     float edgeSoftness;
     uint isOverlay;
     uint direction;
-    uint isFold;
+    uint animation; // 0: sweep, 1: soft fold, 2: perspective
     float foldShadow;
     float foldWidth;
     float foldBlurRadius;
-    uint isPerspective;
     float perspectiveStrength;
     float perspectiveFeather;
 };
@@ -22,14 +20,13 @@ struct VertexOut {
     float2 uv;
 };
 
-vertex VertexOut blurVertex(uint id [[vertex_id]],
-                            constant MeshVertex *vertices [[buffer(0)]]) {
-    MeshVertex v = vertices[id];
+vertex VertexOut blurVertex(uint id [[vertex_id]]) {
+    // One oversized triangle covers the viewport without a CPU vertex buffer
+    // or a diagonal seam. Texture coordinates still map the desktop exactly.
+    constexpr float2 positions[] = { float2(-1, -1), float2(3, -1), float2(-1, 3) };
     VertexOut out;
-    // The quad always fills the output. Optional perspective is inverse-mapped
-    // in the fragment shader, including the backdrop outside the tilted panel.
-    out.position = float4(v.position, 0.0, 1.0);
-    out.uv = v.uv;
+    out.position = float4(positions[id], 0.0, 1.0);
+    out.uv = positions[id] * float2(0.5, -0.5) + 0.5;
     return out;
 }
 
@@ -73,7 +70,7 @@ fragment float4 blurFragment(VertexOut in [[stage_in]],
                               constant Uniforms &u [[buffer(0)]]) {
     float2 sourceUV = in.uv;
     float panelCoverage = 1.0;
-    bool perspective = u.isPerspective != 0 && u.perspectiveStrength > 0.0;
+    bool perspective = u.animation == 2 && u.perspectiveStrength > 0.0;
     if (perspective && u.progress > 0.0) {
         float2 local = directedUV(in.uv, u.direction);
         // Rotate away from the viewer around the destination edge (bottom for
@@ -104,7 +101,7 @@ fragment float4 blurFragment(VertexOut in [[stage_in]],
     float coverage = 1.0 - smoothstep(boundary - u.edgeSoftness,
                                       boundary + u.edgeSoftness, coordinate);
     float3 blurred = blurredDesktop.sample(linearSampler, sourceUV).rgb;
-    if (u.isFold != 0) {
+    if (u.animation != 0) {
         // Carry the reference's progressive blur/shading behind a moving front.
         // Darkness starts after the blur and grows with closing, without a rim
         // or a separate shadow stripe. Opening traverses this same path backward.

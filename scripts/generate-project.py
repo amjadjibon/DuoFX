@@ -77,6 +77,7 @@ for name in ("Debug", "Release"):
         ENABLE_APP_SANDBOX = NO; ENABLE_HARDENED_RUNTIME = YES;
         SWIFT_OPTIMIZATION_LEVEL = "{optimization}";
         SWIFT_EMIT_LOC_STRINGS = NO;
+        SWIFT_STRICT_CONCURRENCY = complete;
         LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
     }};'''))
 project_list = add("project-list", f'isa = XCConfigurationList; buildConfigurations = {array(project_configs)}; defaultConfigurationIsVisible = 0; defaultConfigurationName = Release;')

@@ -63,7 +63,7 @@ When upgrading from an old build, quit DuoFX, remove its existing entry from **S
 
 ## Included
 
-- A full-screen Metal quad with MPS Gaussian blur for Blur sweep and a GPU mip pyramid with variable-radius sampling for Soft fold and Perspective. Perspective uses inverse planar projection with antialiased moving edges. Opening the lid reverses the same path. Settings control blur, edge softness, shading, direction, tilt strength, and motion easing.
+- A full-screen Metal triangle with MPS Gaussian blur for Blur sweep and a GPU mip pyramid with variable-radius sampling for Soft fold and Perspective. The shader generates its vertices directly, without a CPU mesh buffer. Perspective uses inverse planar projection with faded moving edges. Opening the lid reverses the same path. Settings control blur, edge softness, shading, direction, tilt strength, and motion easing.
 - Silk, Shade, and Frost presets; working/minimum angle calibration; persisted appearance and input choices. Enabling is intentionally not persisted.
 - A deterministic bundled PNG for permission-free development and an embedded Metal preview that only redraws when settings change.
 - Built-in-display-only ScreenCaptureKit capture at up to 60 FPS, BGRA IOSurface textures, complete-frame filtering, no cursor or audio, and exclusion of every DuoFX window.
@@ -76,12 +76,12 @@ All captured content stays on the device in memory. The app has no network, anal
 ## Validation
 
 ```sh
-swift test
+swift test -Xswiftc -strict-concurrency=complete
 xcodebuild -project DuoFX.xcodeproj -scheme DuoFX \
   -configuration Release -derivedDataPath build build
 ```
 
-Tests cover mapping boundaries, smoothing/velocity, hysteresis, blur coverage, report decoding, presets, settings migration, persistence, manual-provider lifecycle, and capture startup/pause/source-switch/failure/sleep/quit races using a controlled capture provider. Offscreen Metal tests compile the actual shader and verify fixed desktop coordinates and transparent uncovered regions for the blur modes, progressive blur/shadow, and opening reversal. Perspective tests check projected content, hinge anchoring in every direction, the opaque backdrop, zero-strength equivalence to Soft fold, and settings persistence. These tests do not request Screen Recording permission or display a full-screen overlay. GPU/display-dependent tests explicitly skip if their hardware is absent.
+Tests cover mapping boundaries, smoothing/velocity, hysteresis, blur coverage, report decoding, presets, settings migration, persistence, manual-input lifecycle, and capture startup/pause/source-switch/failure/sleep/quit races using a controlled capture provider. Offscreen Metal tests compile the actual shader and verify fixed desktop coordinates and transparent uncovered regions for the blur modes, progressive blur/shadow, and opening reversal. Perspective tests check projected content, hinge anchoring in every direction, the opaque backdrop, zero-strength equivalence to Soft fold, and settings persistence. These tests do not request Screen Recording permission or display a full-screen overlay. GPU/display-dependent tests explicitly skip if their hardware is absent.
 
 To render open, half-closed, and closed snapshots of the bundled fixture, run `DUOFX_PREVIEW_SNAPSHOTS=/tmp/duofx-preview swift test --filter RenderingTests`. Only the bundled test image is saved; captured desktop content is never used by these tests.
 
@@ -110,11 +110,11 @@ The automated suite does not establish physical lid tracking, actual Screen Reco
 
 ## Project layout
 
-`DuoFX/App` owns lifecycle and observation; `Sensor` owns HID and manual input; `Capture` owns ScreenCaptureKit; `Rendering` owns the overlay, textures, mesh, and shader; `Settings` contains the SwiftUI controls. Pure models and math compile as `DuoFXCore` for Swift Package tests. Xcode builds the same sources directly into the app.
+`DuoFX/App` owns lifecycle, observation, manual input, and resource lookup; `Sensor` owns HID input; `Capture` owns ScreenCaptureKit; `Rendering` owns the overlay, textures, and shader; `Settings` contains the SwiftUI controls and a separate Metal preview bridge. Pure models and math compile as `DuoFXCore` for Swift Package tests. Xcode builds the same sources directly into the app.
 
-Metal source is bundled and compiled once per renderer with `makeLibrary`, so a separate Metal command-line toolchain download is not required. Rendering pipelines, meshes, and samplers are retained. Blur kernels are rebuilt only when the quantized sigma changes, and the intermediate texture is reused until the source size changes.
+Metal source is bundled and compiled once per renderer with `makeLibrary`, so a separate Metal command-line toolchain download is not required. Rendering pipelines and samplers are retained. Blur kernels are rebuilt only when the quantized sigma changes, and the intermediate texture is reused until the source size changes.
 
-After adding source files, regenerate the checked-in Xcode project with `python3 scripts/generate-project.py`. The technical orientation fixture can be regenerated into `build/fixtures/Orientation.png` with `python3 scripts/generate-preview.py`. This does not overwrite the bundled artwork. Neither script needs third-party packages.
+After adding source files, regenerate the checked-in Xcode project with `python3 scripts/generate-project.py`. The generator needs no third-party packages. Rendering tests use their own orientation texture and the bundled desktop artwork.
 
 `scripts/generate-icon.sh` regenerates the bundled `.icns` app icon using AppKit and `iconutil`. The menu-bar icon is a native template image that adapts to light/dark appearances; both icons share the folding-laptop drawing in `MenuBarIcon.swift`.
 
@@ -124,7 +124,7 @@ After adding source files, regenerate the checked-in Xcode project with `python3
 
 To install an existing DMG without rebuilding, use `./scripts/install.sh build/DuoFX.dmg`. You can also open the DMG in Finder, drag DuoFX to Applications, and launch it there.
 
-For distribution, use your Apple Developer team and Developer ID Application certificate in Xcode, archive the Release scheme, export with Developer ID signing and hardened runtime, notarize with `xcrun notarytool submit --wait`, and staple with `xcrun stapler staple`. Create a DMG from that signed and stapled app and validate it on another supported Mac. Developer ID signing, notarization, and installation on a second Mac require credentials/hardware and are not performed by the local packaging script. Launch at login and sound effects are not included.
+For distribution, use your Apple Developer team and Developer ID Application certificate in Xcode, archive the Release scheme, export with Developer ID signing and hardened runtime, notarize with `xcrun notarytool submit --wait`, and staple with `xcrun stapler staple`. Create a DMG from that signed and stapled app and validate it on another supported Mac. Developer ID signing, notarization, and installation on a second Mac require credentials/hardware and are not performed by the local packaging script. Launch at login is not included.
 
 ## GitHub releases
 

@@ -145,6 +145,12 @@ The script rebuilds the DMG, checks the signature and app version, and uploads `
 
 Signing and notarization are the same as `scripts/package.sh`: uploading to GitHub does not notarize the app. `--dry-run` prints the plan without building or accessing GitHub. Run `python3 scripts/test-release.py` to test release orchestration with fake build/GitHub commands; no release is published by those tests.
 
+## License
+
+DuoFX is licensed under the [Apache License 2.0](LICENSE).
+Third-party components retain their respective licenses; see [NOTICE](NOTICE).
+The license and attribution notices are included in the app bundle.
+
 ## Attribution
 
 HID matching constants and the feature-report reader are adapted from [Sam Gold's LidAngleSensor](https://github.com/samhenrigold/LidAngleSensor), under Apache-2.0. See [NOTICE](NOTICE) and [the original license](Licenses/LidAngleSensor.txt), both included in the app bundle. Other implementation and the bundled preview image are original to DuoFX.

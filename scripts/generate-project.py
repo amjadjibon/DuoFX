@@ -30,8 +30,8 @@ def reference_in_folder(path, reference):
     folder_files.setdefault(path.parent.relative_to(root).as_posix(), []).append(reference)
 
 
-for path in sorted((root / "DuoFX").rglob("*")) + [root / "NOTICE", root / "Licenses/LidAngleSensor.txt"]:
-    if path.suffix not in (".swift", ".metal", ".png", ".txt", ".icns", ".plist", ".wav") and path.name != "NOTICE":
+for path in sorted((root / "DuoFX").rglob("*")) + [root / "LICENSE", root / "NOTICE", root / "Licenses/LidAngleSensor.txt"]:
+    if path.suffix not in (".swift", ".metal", ".png", ".txt", ".icns", ".plist", ".wav") and path.name not in ("LICENSE", "NOTICE"):
         continue
     rel = path.relative_to(root).as_posix()
     kind = {".swift": "sourcecode.swift", ".metal": "text", ".png": "image.png",

@@ -50,6 +50,7 @@ final class MetalRenderer: NSObject, MTKViewDelegate, @unchecked Sendable {
     var configuration = EffectConfiguration()
     var progress: Float = 0
     var isOverlay = true
+    var reduceMotion = false
     var onFailure: (@Sendable (Error) -> Void)?
     var onWillDraw: (() -> Void)?
 
@@ -139,8 +140,9 @@ final class MetalRenderer: NSObject, MTKViewDelegate, @unchecked Sendable {
         // Soft fold samples continuously varying radii from a GPU mip pyramid.
         // Sweep retains its constant Gaussian radius. Perspective projects UVs
         // in the fragment shader and shares Soft fold's variable-radius blur.
+        let usesGaussian = reduceMotion || c.animationMode == .sweep
         let sigma = (Float(c.blurStrength) * 2).rounded() / 2
-        if c.animationMode != .sweep && p > 0 && c.blurStrength > 0 {
+        if !usesGaussian && p > 0 && c.blurStrength > 0 {
             if foldTexture?.width != texture.width || foldTexture?.height != texture.height ||
                 foldTexture?.pixelFormat != texture.pixelFormat {
                 let descriptor = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: texture.pixelFormat,
@@ -157,7 +159,7 @@ final class MetalRenderer: NSObject, MTKViewDelegate, @unchecked Sendable {
             blit.generateMipmaps(for: pyramid)
             blit.endEncoding()
             texture = pyramid
-        } else if c.animationMode == .sweep && p > 0 && sigma >= 0.5 {
+        } else if usesGaussian && p > 0 && sigma >= 0.5 {
             if blurTexture?.width != texture.width || blurTexture?.height != texture.height {
                 let descriptor = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: .bgra8Unorm,
                     width: texture.width, height: texture.height, mipmapped: false)
@@ -175,7 +177,7 @@ final class MetalRenderer: NSObject, MTKViewDelegate, @unchecked Sendable {
         guard let encoder = command.makeRenderCommandEncoder(descriptor: pass) else { throw RendererError.allocation }
         var uniforms = RenderUniforms(progress: p, opacity: opacity,
             shadow: Float(c.shadowStrength), edgeSoftness: Float(c.edgeSoftness), isOverlay: isOverlay ? 1 : 0,
-            direction: c.sweepDirection.shaderValue, animation: c.animationMode.shaderValue,
+            direction: c.sweepDirection.shaderValue, animation: reduceMotion ? 3 : c.animationMode.shaderValue,
             foldShadow: Float(c.foldShadow), foldWidth: Float(c.foldWidth),
             foldBlurRadius: Float(c.blurStrength) * 2.4,
             perspectiveStrength: Float(c.perspectiveStrength), perspectiveFeather: Float(c.perspectiveFeather))

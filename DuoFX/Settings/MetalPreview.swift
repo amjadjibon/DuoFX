@@ -7,6 +7,7 @@ import DuoFXCore
 struct MetalPreview: NSViewRepresentable {
     var configuration: EffectConfiguration
     var progress: Float
+    var reduceMotion = false
     var easesChanges: Bool
     @Binding var error: String?
     final class Coordinator {
@@ -56,6 +57,7 @@ struct MetalPreview: NSViewRepresentable {
             _ = coordinator.easing.update(Double(coordinator.renderer?.progress ?? progress),
                                           at: ProcessInfo.processInfo.systemUptime)
         }
+        coordinator.renderer?.reduceMotion = reduceMotion
         coordinator.renderer?.configuration = configuration
         coordinator.target = progress; coordinator.easesChanges = easesChanges
         view.isPaused = false

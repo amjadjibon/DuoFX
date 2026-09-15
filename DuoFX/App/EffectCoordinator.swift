@@ -13,6 +13,7 @@ final class EffectCoordinator {
     private let sound: any EffectSoundPlaying
     private var soundTrigger = LidSoundTrigger()
     private let screenProvider: @MainActor () -> NSScreen?
+    private let systemReduceMotion: @MainActor () -> Bool
     private let now: @MainActor () -> TimeInterval
     private var renderer: MetalRenderer?
     private var timer: Timer?
@@ -43,15 +44,18 @@ final class EffectCoordinator {
          overlay: (any OverlayPresenting)? = nil,
          sound: (any EffectSoundPlaying)? = nil,
          screenProvider: @escaping @MainActor () -> NSScreen? = OverlayWindowController.builtInScreen,
+         systemReduceMotion: @escaping @MainActor () -> Bool = { NSWorkspace.shared.accessibilityDisplayShouldReduceMotion },
          now: @escaping @MainActor () -> TimeInterval = { ProcessInfo.processInfo.systemUptime }) {
         self.model = model; self.capture = capture ?? ScreenCaptureService()
         self.overlay = overlay ?? OverlayWindowController()
         self.sound = sound ?? EffectSoundPlayer()
         self.screenProvider = screenProvider
         self.now = now
+        self.systemReduceMotion = systemReduceMotion
     }
 
     func start() {
+        model.systemReduceMotion = systemReduceMotion()
         observeSettings()
         sensor.onReading = { [weak self] in self?.rawAngle = $0 }
         sensor.onDiagnostic = { [weak self] diagnostic in
@@ -85,7 +89,7 @@ final class EffectCoordinator {
     private func observeSettings() {
         withObservationTracking {
             _ = model.isEnabled; _ = model.configuration; _ = model.angleSource
-            _ = model.desktopSource; _ = model.manualAngle
+            _ = model.desktopSource; _ = model.manualAngle; _ = model.liveReduceMotion
         } onChange: { [weak self] in
             Task { @MainActor in
                 guard let self, !self.shuttingDown else { return }
@@ -141,7 +145,7 @@ final class EffectCoordinator {
         model.currentAngle = angle; model.velocity = smoother.velocity
         model.progress = closingProgress(angle: angle, workingAngle: c.workingAngle, minimumAngle: c.minimumAngle)
         var visibleProgress = model.progress
-        if c.animationMode == .perspective {
+        if c.animationMode == .perspective && !model.liveReduceMotion {
             if awaitingPresentation {
                 visibleProgress = 0
             } else if let start = presentationStart {
@@ -153,6 +157,7 @@ final class EffectCoordinator {
                 if time - start >= duration { presentationStart = nil }
             }
         }
+        renderer?.reduceMotion = model.liveReduceMotion
         renderer?.configuration = c; renderer?.progress = visibleProgress
         if hasFrame && c.soundEnabled && c.soundVolume > 0 {
             if let cue = soundTrigger.update(progress: Double(model.progress), at: time) {
@@ -216,6 +221,7 @@ final class EffectCoordinator {
                         self.tick()
                     }
                 }
+                renderer.reduceMotion = model.liveReduceMotion
                 renderer.configuration = model.configuration.validated(); renderer.progress = model.progress
                 renderer.onFailure = { [weak self] error in
                     Task { @MainActor in
@@ -273,7 +279,7 @@ final class EffectCoordinator {
               !shuttingDown, let renderer,
               let screen = screenProvider() else { return }
         hasFrame = true; firstFrameTask?.cancel(); firstFrameTask = nil
-        awaitingPresentation = model.configuration.animationMode == .perspective
+        awaitingPresentation = model.configuration.animationMode == .perspective && !model.liveReduceMotion
         presentationStart = nil
         if awaitingPresentation { renderer.progress = 0 }
         overlay.show(renderer: renderer, on: screen)
@@ -295,6 +301,11 @@ final class EffectCoordinator {
             observers.append((center, observer))
         }
         let workspace = NSWorkspace.shared.notificationCenter
+        watch(workspace, NSWorkspace.accessibilityDisplayOptionsDidChangeNotification) { [weak self] in
+            guard let self else { return }
+            self.model.systemReduceMotion = self.systemReduceMotion()
+            self.refresh()
+        }
         let events: [(Notification.Name, String, Bool)] = [
             (NSWorkspace.willSleepNotification, "sleep", true),
             (NSWorkspace.didWakeNotification, "sleep", false),

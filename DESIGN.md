@@ -799,7 +799,7 @@ func progressIsClamped() {
 
 - Persist settings.
 - Improve permission guidance and recovery.
-- Add launch-at-login support if desired.
+- Launch-at-login support is implemented using `SMAppService.mainApp`; opt-in, with effects paused at startup.
 - Profile CPU, GPU, memory, and power use.
 - Sign, notarize, and package a DMG.
 

@@ -14,6 +14,9 @@ struct SettingsView: View {
     @State private var followsLid = false
     @State private var demoTask: Task<Void, Never>?
     @State private var previewError: String?
+    @State private var selectedPreset: UUID?
+    @State private var isSavingPreset = false
+    @State private var presetName = ""
     private static let appIcon = AppResources.bundle.url(forResource: "DuoFX", withExtension: "icns")
         .flatMap(NSImage.init(contentsOf:)) ?? NSApplication.shared.applicationIconImage!
 
@@ -24,6 +27,7 @@ struct SettingsView: View {
     private var accent: Color {
         colorScheme == .dark ? Color(red: 0.36, green: 0.78, blue: 0.76) : Color(red: 0.12, green: 0.48, blue: 0.48)
     }
+    private var previewReducesMotion: Bool { reduceMotion || model.liveReduceMotion }
     private var progress: Float { followsLid && model.isEnabled ? model.progress : Float(previewPosition) }
     private var displayedAngle: Double {
         model.configuration.workingAngle - Double(progress) * (model.configuration.workingAngle - model.configuration.minimumAngle)
@@ -60,6 +64,22 @@ struct SettingsView: View {
         .background(Color(nsColor: .windowBackgroundColor))
         .tint(accent)
         .background(SettingsWindowLevel())
+        .sheet(isPresented: $isSavingPreset) {
+            VStack(alignment: .leading, spacing: 16) {
+                Text("Save custom preset").font(.headline)
+                TextField("Preset name", text: $presetName)
+                    .onSubmit { savePreset() }
+                Text("Use a unique name, up to 60 characters.")
+                    .font(.caption).foregroundStyle(.secondary)
+                HStack {
+                    Spacer()
+                    Button("Cancel") { isSavingPreset = false }.keyboardShortcut(.cancelAction)
+                    Button("Save") { savePreset() }
+                        .keyboardShortcut(.defaultAction)
+                        .disabled(!model.canSavePreset(named: presetName))
+                }
+            }.padding(24).frame(width: 340)
+        }
         .onDisappear { stopDemo() }
         .onChange(of: model.isEnabled) { _, enabled in
             if !enabled { followsLid = false; stopDemo() }
@@ -67,7 +87,7 @@ struct SettingsView: View {
         .onChange(of: model.angleSource) { _, source in
             if source != .sensor { followsLid = false }
         }
-        .onChange(of: reduceMotion) { _, reduced in if reduced { stopDemo() } }
+        .onChange(of: previewReducesMotion) { _, reduced in if reduced { stopDemo() } }
     }
 
     private var header: some View {
@@ -92,7 +112,7 @@ struct SettingsView: View {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Preview").font(.title2.weight(.semibold))
-                    Label("Sample desktop · Preview only", systemImage: "photo")
+                    Label(previewReducesMotion ? "Sample desktop · Reduced motion" : "Sample desktop · Preview only", systemImage: "photo")
                         .font(.caption).foregroundStyle(.secondary)
                 }
                 Spacer()
@@ -100,8 +120,8 @@ struct SettingsView: View {
                     demoTask == nil ? playDemo() : stopDemo()
                 } label: {
                     Label(demoTask == nil ? "Play demo" : "Stop demo", systemImage: demoTask == nil ? "play.fill" : "stop.fill")
-                }.buttonStyle(.bordered).disabled(followsLid || reduceMotion)
-                    .help(reduceMotion ? "Automatic demos are disabled while Reduce Motion is on" : "Preview a closing and opening sweep")
+                }.buttonStyle(.bordered).disabled(followsLid || previewReducesMotion)
+                    .help(previewReducesMotion ? "Automatic demos are disabled while Reduce Motion is on" : "Preview a closing and opening sweep")
             }
             Group {
                 if let previewError {
@@ -109,8 +129,9 @@ struct SettingsView: View {
                         description: Text(previewError))
                 } else {
                     MetalPreview(configuration: model.configuration, progress: progress,
-                                 easesChanges: !followsLid && !reduceMotion, error: $previewError)
-                        .accessibilityLabel("Sample desktop, \(model.configuration.sweepDirection.title), blur progress \(Int(progress * 100)) percent")
+                                 reduceMotion: previewReducesMotion,
+                                 easesChanges: !followsLid && !previewReducesMotion, error: $previewError)
+                        .accessibilityLabel("Sample desktop, \(previewReducesMotion ? "uniform blur fade" : model.configuration.sweepDirection.title), blur progress \(Int(progress * 100)) percent")
                 }
             }
             .aspectRatio(1.5, contentMode: .fit)
@@ -190,6 +211,8 @@ struct SettingsView: View {
                     .font(.caption).help("Cinematic Frost with gentle easing and quiet sound. Keeps your calibration and sound toggle.")
             }
             Divider()
+            customPresetControls
+            Divider()
             VStack(spacing: 20) {
                 adjustment("Blur", detail: "How soft the covered area becomes", value: $model.configuration.blurStrength,
                            range: 0...30, display: model.configuration.animationMode != .sweep
@@ -202,6 +225,38 @@ struct SettingsView: View {
                            range: 0.08...0.4, display: String(format: "%.2f s", model.configuration.motionResponse))
             }
         }
+    }
+
+    private var customPresetControls: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            sectionHeading("Custom presets", detail: "Save appearance and sound together. Applying a preset keeps your lid calibration, input, and accessibility choices.")
+            if !model.customPresets.isEmpty {
+                Picker("Saved preset", selection: $selectedPreset) {
+                    Text("Choose a preset").tag(nil as UUID?)
+                    ForEach(model.customPresets) { preset in
+                        Text(preset.name).tag(Optional(preset.id))
+                    }
+                }
+                if let id = selectedPreset {
+                    HStack {
+                        Button("Apply") { model.applyPreset(id: id) }
+                        Menu("Manage") {
+                            Button("Replace with current settings") { model.updatePreset(id: id) }
+                            Button("Delete preset", role: .destructive) {
+                                model.deletePreset(id: id); selectedPreset = nil
+                            }
+                        }.fixedSize()
+                    }
+                }
+            }
+            Button("Save current settings…") { presetName = ""; isSavingPreset = true }
+        }
+    }
+
+    private func savePreset() {
+        guard let id = model.savePreset(named: presetName) else { return }
+        selectedPreset = id
+        isSavingPreset = false
     }
 
     private var soundControls: some View {
@@ -221,6 +276,16 @@ struct SettingsView: View {
 
     private var setupControls: some View {
         Group {
+            sectionHeading("Startup", detail: "Keep DuoFX within reach.")
+            LoginItemSettings()
+            Divider()
+            sectionHeading("Live motion", detail: "Reduced motion keeps the desktop fixed and fades blur evenly across the screen.")
+            Picker("Reduce Motion", selection: $model.motionPreference) {
+                ForEach(MotionPreference.allCases) { Text($0.title).tag($0) }
+            }
+            Text(model.liveReduceMotion ? "Live effect: gentle blur fade." : "Live effect: your selected animation.")
+                .font(.caption).foregroundStyle(.secondary)
+            Divider()
             sectionHeading("Connect to your Mac", detail: "Set how DuoFX follows your lid.")
             VStack(alignment: .leading, spacing: 14) {
                 Picker("Input", selection: $model.angleSource) {

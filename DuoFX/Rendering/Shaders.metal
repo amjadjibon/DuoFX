@@ -8,7 +8,7 @@ struct Uniforms {
     float edgeSoftness;
     uint isOverlay;
     uint direction;
-    uint animation; // 0: sweep, 1: soft fold, 2: perspective
+    uint animation; // 0: sweep, 1: soft fold, 2: perspective, 3: reduced motion
     float foldShadow;
     float foldWidth;
     float foldBlurRadius;
@@ -110,8 +110,11 @@ fragment float4 blurFragment(VertexOut in [[stage_in]],
     float boundary = mix(-u.edgeSoftness, 1.0 + u.edgeSoftness, u.progress);
     float coverage = 1.0 - smoothstep(boundary - u.edgeSoftness,
                                       boundary + u.edgeSoftness, coordinate);
+    // Reduced motion crossfades a uniform blur at unchanged desktop coordinates.
+    // There is no moving boundary, projection, or folding shadow.
+    if (u.animation == 3) coverage = smoothstep(0.0, 1.0, u.progress);
     float3 blurred = blurredDesktop.sample(linearSampler, sourceUV).rgb;
-    if (u.animation != 0) {
+    if (u.animation == 1 || u.animation == 2) {
         // Carry the reference's progressive blur/shading behind a moving front.
         // Darkness starts after the blur and grows with closing, without a rim
         // or a separate shadow stripe. Opening traverses this same path backward.

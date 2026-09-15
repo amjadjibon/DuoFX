@@ -5,6 +5,38 @@ import XCTest
 @testable import DuoFXCore
 
 final class RenderingTests: XCTestCase {
+    func testReducedMotionKeepsCoordinatesFixedAndFadesUniformly() throws {
+        let fixture = try RenderFixture()
+        fixture.renderer.reduceMotion = true
+        fixture.renderer.configuration.blurStrength = 0
+        for mode in AnimationMode.allCases {
+            fixture.renderer.configuration.animationMode = mode
+            for direction in SweepDirection.allCases {
+                fixture.renderer.configuration.sweepDirection = direction
+                for progress: Float in [0, 0.25, 0.5, 1] {
+                    XCTAssertEqual(try fixture.render(progress), fixture.original)
+                }
+            }
+        }
+        fixture.renderer.isOverlay = true
+        XCTAssertTrue(try fixture.render(0).allSatisfy { $0 == 0 })
+        let half = try fixture.render(0.5)
+        for y in 0..<64 {
+            for x in 0..<64 {
+                XCTAssertEqual(Int(fixture.pixel(half, x, y)[3]), 128, accuracy: 1)
+            }
+        }
+        XCTAssertEqual(try fixture.render(1), fixture.original)
+        fixture.renderer.isOverlay = false
+        fixture.renderer.configuration.blurStrength = 8
+        let blurred = try fixture.render(0.5)
+        XCTAssertGreaterThan(fixture.pixel(blurred, 30, 8)[1], 10)
+        XCTAssertGreaterThan(fixture.pixel(blurred, 30, 56)[1], 10)
+        XCTAssertEqual(try fixture.render(0), fixture.original)
+        _ = try fixture.render(1)
+        XCTAssertEqual(try fixture.render(0.5), blurred)
+    }
+
     func testUniformLayoutMatchesShader() {
         XCTAssertEqual(MemoryLayout<RenderUniforms>.stride, 48)
     }

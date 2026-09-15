@@ -8,6 +8,7 @@ import XCTest
 @MainActor
 final class LifecycleTests: XCTestCase {
     private func fixture(sound: (any EffectSoundPlaying)? = nil,
+                         systemReduceMotion: @escaping @MainActor () -> Bool = { false },
                          now: @escaping @MainActor () -> TimeInterval = { ProcessInfo.processInfo.systemUptime }) throws -> (AppModel, DelayedCapture, RecordingOverlay, EffectCoordinator, String) {
         guard MTLCreateSystemDefaultDevice() != nil, let screen = NSScreen.screens.first else {
             throw XCTSkip("A display and Metal are required for coordinator integration tests")
@@ -18,8 +19,32 @@ final class LifecycleTests: XCTestCase {
         model.desktopSource = .liveDesktop; model.manualAngle = 60; model.isEnabled = true
         let capture = DelayedCapture()
         let overlay = RecordingOverlay()
-        let coordinator = EffectCoordinator(model: model, capture: capture, overlay: overlay, sound: sound, screenProvider: { screen }, now: now)
+        let coordinator = EffectCoordinator(model: model, capture: capture, overlay: overlay, sound: sound, screenProvider: { screen }, systemReduceMotion: systemReduceMotion, now: now)
         return (model, capture, overlay, coordinator, suite)
+    }
+
+    func testLiveReducedMotionTracksSystemWithoutSettingsWindow() async throws {
+        var reduced = true
+        let (model, capture, overlay, coordinator, suite) = try fixture(systemReduceMotion: { reduced })
+        defer { UserDefaults.standard.removePersistentDomain(forName: suite) }
+        model.configuration.animationMode = .perspective
+        coordinator.start()
+        await waitUntil { capture.startCount == 1 }
+        capture.finishStart(); capture.deliverFrame()
+        await waitUntil { overlay.showCount == 1 }
+        let renderer = try XCTUnwrap(overlay.renderer)
+        XCTAssertTrue(renderer.reduceMotion)
+        XCTAssertGreaterThan(try XCTUnwrap(overlay.initialProgress), 0)
+        reduced = false
+        NSWorkspace.shared.notificationCenter.post(name: NSWorkspace.accessibilityDisplayOptionsDidChangeNotification, object: nil)
+        await waitUntil { !renderer.reduceMotion }
+        model.motionPreference = .reduced
+        await waitUntil { renderer.reduceMotion }
+        model.motionPreference = .full
+        await waitUntil { !renderer.reduceMotion }
+        XCTAssertEqual(model.configuration.animationMode, .perspective)
+        XCTAssertEqual(capture.startCount, 1)
+        await coordinator.shutdown()
     }
 
     func testPauseDuringCaptureStartupCannotReopenOverlay() async throws {

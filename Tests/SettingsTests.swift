@@ -4,6 +4,64 @@ import XCTest
 
 final class SettingsTests: XCTestCase {
     @MainActor
+    func testCustomPresetsPersistAndPreserveCalibrationAndAccessibility() throws {
+        let suite = "DuoFXPresets.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let model = AppModel(defaults: defaults)
+        model.configuration.animationMode = .perspective
+        model.configuration.soundEnabled = true
+        let id = try XCTUnwrap(model.savePreset(named: "  Evening  "))
+        XCTAssertNil(model.savePreset(named: "evening"))
+        XCTAssertNil(model.savePreset(named: "   "))
+        XCTAssertNil(model.savePreset(named: String(repeating: "a", count: 61)))
+        let restored = AppModel(defaults: defaults)
+        XCTAssertEqual(restored.customPresets.first?.name, "Evening")
+        restored.configuration.applyRecommended()
+        restored.configuration.workingAngle = 115
+        restored.configuration.minimumAngle = 35
+        restored.configuration.soundEnabled = false
+        restored.motionPreference = .reduced
+        restored.angleSource = .manual
+        restored.desktopSource = .testImage
+        restored.applyPreset(id: id)
+        XCTAssertEqual(restored.configuration.animationMode, .perspective)
+        XCTAssertTrue(restored.configuration.soundEnabled)
+        XCTAssertEqual(restored.configuration.workingAngle, 115)
+        XCTAssertEqual(restored.configuration.minimumAngle, 35)
+        XCTAssertEqual(restored.motionPreference, .reduced)
+        XCTAssertEqual(restored.angleSource, .manual)
+        XCTAssertEqual(restored.desktopSource, .testImage)
+        XCTAssertFalse(restored.isEnabled)
+        restored.configuration.blurStrength = 7
+        restored.updatePreset(id: id)
+        let updated = AppModel(defaults: defaults)
+        XCTAssertEqual(updated.customPresets.first?.configuration.blurStrength, 7)
+        updated.deletePreset(id: id)
+        XCTAssertTrue(AppModel(defaults: defaults).customPresets.isEmpty)
+        defaults.set(Data("invalid".utf8), forKey: "customPresets")
+        XCTAssertTrue(AppModel(defaults: defaults).customPresets.isEmpty)
+    }
+
+    @MainActor
+    func testMotionPreferenceFollowsSystemAndPersistsOverrides() throws {
+        let suite = "DuoFXMotion.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let model = AppModel(defaults: defaults)
+        XCTAssertEqual(model.motionPreference, .system)
+        XCTAssertFalse(model.liveReduceMotion)
+        model.systemReduceMotion = true
+        XCTAssertTrue(model.liveReduceMotion)
+        model.motionPreference = .full
+        XCTAssertFalse(model.liveReduceMotion)
+        XCTAssertEqual(AppModel(defaults: defaults).motionPreference, .full)
+        model.systemReduceMotion = false
+        model.motionPreference = .reduced
+        XCTAssertTrue(AppModel(defaults: defaults).liveReduceMotion)
+    }
+
+    @MainActor
     func testPreferencesPersistButEffectDoesNotAutoEnable() throws {
         let suite = "DuoFXTests.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))

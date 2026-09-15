@@ -89,10 +89,20 @@ fragment float4 blurFragment(VertexOut in [[stage_in]],
                                  (0.5 + halfWidth) - local.x, local.y - top);
         float3 aa = max(fwidth(distance), float3(0.00001));
         float2 pixel = max(fwidth(local), float2(0.00001));
-        float fadePixels = u.perspectiveFeather / max(pixel.x, pixel.y)
-            * smoothstep(0.0, 0.2, u.progress * u.perspectiveStrength);
-        float3 edge = smoothstep(-aa, aa * (1.0 + fadePixels), distance);
-        panelCoverage = edge.x * edge.y * edge.z;
+        float reveal = smoothstep(0.0, 0.2, u.progress * u.perspectiveStrength);
+        float shortSidePixels = 1.0 / max(pixel.x, pixel.y);
+        float fadePixels = u.perspectiveFeather * shortSidePixels * reveal;
+        // Round the two corners opposite the hinge independently of tilt
+        // strength, so gentle perspective still has a visible curve. Ease in
+        // near fully open and zero strength; compensate for the inward fade.
+        float cornerReveal = smoothstep(0.0, 0.15, u.progress)
+            * smoothstep(0.0, 0.03, u.perspectiveStrength);
+        float radius = 0.012 * shortSidePixels * cornerReveal + fadePixels * 0.5;
+        float3 edgePixels = distance / aa;
+        float2 corner = radius - float2(min(edgePixels.x, edgePixels.y), edgePixels.z);
+        float outline = radius - length(max(corner, 0.0))
+            - min(max(corner.x, corner.y), 0.0);
+        panelCoverage = smoothstep(-1.0, 1.0 + fadePixels, outline);
         sourceUV = desktopUV(saturate(projected), u.direction);
     }
     float coordinate = directedUV(sourceUV, u.direction).y;

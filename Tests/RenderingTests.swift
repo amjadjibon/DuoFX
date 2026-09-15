@@ -245,6 +245,37 @@ final class RenderingTests: XCTestCase {
                 try fixture.save(image, to: URL(fileURLWithPath: directory).appendingPathComponent("perspective-\(name).png"))
             }
         }
+        fixture.renderer.configuration.perspectiveStrength = 0.145
+        let gentle = try fixture.render(0.25)
+        if let directory = ProcessInfo.processInfo.environment["DUOFX_PREVIEW_SNAPSHOTS"] {
+            try fixture.save(gentle, to: URL(fileURLWithPath: directory).appendingPathComponent("perspective-gentle.png"))
+        }
+    }
+
+    func testPerspectiveCornersStaySmallAndRounded() throws {
+        // A larger fixture resolves the subtle display-style radius.
+        let fixture = try RenderFixture(size: 512)
+        fixture.renderer.configuration.animationMode = .perspective
+        fixture.renderer.configuration.blurStrength = 0
+        fixture.renderer.configuration.foldShadow = 0
+        for (strength, progress, cornerX, topY): (Double, Float, Int, Int) in [
+            (0.145, 0.25, 8, 16), (1, 0.5, 70, 216)
+        ] {
+            fixture.renderer.configuration.perspectiveStrength = strength
+            for feather in strength == 1 ? [0.0] : [0.0, 0.06] {
+                fixture.renderer.configuration.perspectiveFeather = feather
+                let image = try fixture.render(progress)
+                let top = Int(fixture.pixel(image, 128, topY)[2])
+                let left = Int(fixture.pixel(image, cornerX, topY)[2])
+                let right = Int(fixture.pixel(image, 511 - cornerX, topY)[1])
+                XCTAssertGreaterThan(top - left, 20, "The corner must curve even at gentle tilt")
+                XCTAssertEqual(left, right)
+                XCTAssertEqual(fixture.pixel(image, cornerX + 12, topY)[2], UInt8(top),
+                               "The curve must join the straight edge within a small radius")
+                XCTAssertEqual(fixture.pixel(image, 128, 480), fixture.pixel(fixture.original, 128, 480))
+            }
+        }
+        XCTAssertEqual(try fixture.render(0), fixture.original)
     }
 
     func testPerspectiveOutlineFadesGraduallyAndWidthIsAdjustable() throws {
@@ -281,7 +312,7 @@ private final class RenderFixture {
     let height: Int
     var original: [UInt8] = []
 
-    init(useBundledImage: Bool = false) throws {
+    init(useBundledImage: Bool = false, size: Int = 64) throws {
         guard let device = MTLCreateSystemDefaultDevice() else { throw XCTSkip("Metal GPU unavailable") }
         renderer = try MetalRenderer(device: device)
         renderer.isOverlay = false
@@ -292,19 +323,19 @@ private final class RenderFixture {
             let url = try XCTUnwrap(AppResources.bundle.url(forResource: "Preview", withExtension: "png"))
             input = try MTKTextureLoader(device: device).newTexture(URL: url, options: [.SRGB: false])
         } else {
-            let descriptor = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: .bgra8Unorm, width: 64, height: 64, mipmapped: false)
+            let descriptor = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: .bgra8Unorm, width: size, height: size, mipmapped: false)
             descriptor.storageMode = .shared; descriptor.usage = .shaderRead
             input = try XCTUnwrap(device.makeTexture(descriptor: descriptor))
-            original = [UInt8](repeating: 255, count: 64 * 64 * 4)
-            for y in 0..<64 {
-                for x in 0..<64 {
-                    let i = (y * 64 + x) * 4
-                    original[i] = y >= 32 ? 255 : 0
-                    original[i + 1] = x >= 32 ? 255 : 0
-                    original[i + 2] = y < 32 ? 255 : 0
+            original = [UInt8](repeating: 255, count: size * size * 4)
+            for y in 0..<size {
+                for x in 0..<size {
+                    let i = (y * size + x) * 4
+                    original[i] = y >= size / 2 ? 255 : 0
+                    original[i + 1] = x >= size / 2 ? 255 : 0
+                    original[i + 2] = y < size / 2 ? 255 : 0
                 }
             }
-            input.replace(region: MTLRegionMake2D(0, 0, 64, 64), mipmapLevel: 0, withBytes: original, bytesPerRow: 64 * 4)
+            input.replace(region: MTLRegionMake2D(0, 0, size, size), mipmapLevel: 0, withBytes: original, bytesPerRow: size * 4)
         }
         width = input.width; height = input.height
         let descriptor = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: .bgra8Unorm, width: width, height: height, mipmapped: false)

@@ -18,12 +18,13 @@ struct DuoFXApp: App {
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
-    let model = AppModel()
+    let model = PerformanceRun.makeModel()
     lazy var coordinator = EffectCoordinator(model: model)
     private var terminating = false
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApplication.shared.setActivationPolicy(.accessory)
         coordinator.start()
+        PerformanceRun.shared?.start(model: model, coordinator: coordinator)
     }
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
         guard !terminating else { return .terminateLater }

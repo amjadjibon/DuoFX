@@ -93,6 +93,18 @@ To render open, half-closed, and closed snapshots of the bundled fixture, run `D
 
 `DUOFX_RENDER_BENCHMARK=1 swift test --filter RenderingPerformanceTests` reports GPU p50/p95/p99 times for a synthetic 3024×1964 frame at sweep blur radii 0, 12, and 18, plus Soft fold and Perspective at maximum blur. This measures rendering cost, not achieved onscreen FPS or capture latency.
 
+To measure **onscreen** frame pacing with the installed Release app, run:
+
+```sh
+python3 scripts/measure-performance.py
+```
+
+This runs a 150-second live-desktop replay with Settings closed: paused baseline, enabled idle, six perspective closing/opening cycles, a sustained half-close, and a paused recovery period. It temporarily restarts the installed app and reopens it normally afterward. Your saved preferences remain unchanged; the replay uses a separate preferences domain, manual angle input, your current appearance settings with Perspective selected, and sound off. Existing Screen Recording access is required. The menu's Pause command remains available.
+
+Results go to `build/performance-<timestamp>/REPORT.md`, with numeric `frames.json` and `resources.json` data. Presentation intervals come from Metal drawable `presentedTime`; startup delay and first-second p50/p95/p99 are reported separately from steady intervals and GPU duration. Resource samples include cumulative CPU-time deltas, resident memory, and whole-Mac battery discharge watts when unplugged. Battery figures are short, noisy system measurements, not isolated app power or battery-life estimates. Keep brightness, other apps, and power mode unchanged between runs. The replay does not measure physical sensor latency and saves no screen pixels.
+
+Use `--output <new-directory>` to name a run, `--app <installed-app-path>` for a custom installation, or `--summarize <result-directory>` to regenerate its report. Normal app launches keep telemetry disabled; only this explicit diagnostic launch sets `DUOFX_PERFORMANCE_REPORT`.
+
 To additionally probe the physical lid sensor, run `DUOFX_HARDWARE_TESTS=1 swift test --filter HardwareTests`. This samples the sensor briefly without moving the lid, requesting capture permission, or showing an overlay. It reports an explicit skip for unsupported hardware.
 
 To check capture discovery with Settings closed, leave the installed DuoFX running with its effect paused and Settings closed, then run `DUOFX_CAPTURE_TESTS=1 swift test --filter HardwareTests/testCaptureDiscoveryIncludesDuoFXWithSettingsClosed`. This requires existing Screen Recording access for the test runner, queries app/window metadata without recording frames, and verifies DuoFX can still be excluded from capture without a visible window.

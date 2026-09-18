@@ -37,6 +37,7 @@ final class OverlayWindowController: OverlayPresenting {
         view.colorPixelFormat = .bgra8Unorm
         view.clearColor = MTLClearColorMake(0, 0, 0, 0)
         view.preferredFramesPerSecond = min(max(screen.maximumFramesPerSecond, 60), 120)
+        PerformanceRun.shared?.record("requested-hz", value: Double(view.preferredFramesPerSecond))
         view.framebufferOnly = true
         view.isPaused = false; view.enableSetNeedsDisplay = false
         view.autoresizingMask = [.width, .height]; view.delegate = renderer

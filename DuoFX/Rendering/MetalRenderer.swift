@@ -82,6 +82,7 @@ final class MetalRenderer: NSObject, MTKViewDelegate, @unchecked Sendable {
         frameLock.lock(); defer { frameLock.unlock() }
         guard let frame = bridge.texture(from: buffer) else { return false }
         latestFrame = frame
+        PerformanceRun.shared?.record("capture")
         return true
     }
 
@@ -101,9 +102,15 @@ final class MetalRenderer: NSObject, MTKViewDelegate, @unchecked Sendable {
     func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {}
 
     func draw(in view: MTKView) {
-        guard inFlight.wait(timeout: .now()) == .success else { return }
+        let probe = PerformanceRun.shared
+        let drawStart = probe.map { _ in ProcessInfo.processInfo.systemUptime }
+        let session = probe?.session
+        probe?.record("draw", session: session)
+        guard inFlight.wait(timeout: .now()) == .success else {
+            probe?.record("inflight-skip", session: session); return
+        }
         guard let drawable = view.currentDrawable,
-              let pass = view.currentRenderPassDescriptor else { inFlight.signal(); return }
+              let pass = view.currentRenderPassDescriptor else { probe?.record("drawable-skip", session: session); inFlight.signal(); return }
         // Start presentation timing only when a drawable is available. Waiting
         // for the initial surface must not consume the clear-to-tilted reveal.
         onWillDraw?()
@@ -116,6 +123,15 @@ final class MetalRenderer: NSObject, MTKViewDelegate, @unchecked Sendable {
             try encode(frame: frame, pass: pass, command: command)
         } catch {
             inFlight.signal(); onFailure?(error); return
+        }
+        if let probe, let drawStart {
+            probe.record("encode-ms", value: (ProcessInfo.processInfo.systemUptime - drawStart) * 1000, session: session)
+            drawable.addPresentedHandler { drawable in
+                probe.record("presented", value: drawable.presentedTime, session: session)
+            }
+            command.addCompletedHandler { buffer in
+                probe.record("gpu-ms", value: (buffer.gpuEndTime - buffer.gpuStartTime) * 1000, session: session)
+            }
         }
         let semaphore = inFlight
         let failure = onFailure

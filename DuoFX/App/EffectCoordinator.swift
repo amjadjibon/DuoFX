@@ -185,6 +185,8 @@ final class EffectCoordinator {
 
     private func setTarget(_ next: OutputTarget?) {
         guard next != target else { return }
+        if next != nil { PerformanceRun.shared?.beginSession() }
+        else { PerformanceRun.shared?.record("hidden") }
         target = next; revision += 1
         sound.stop(); soundTrigger = LidSoundTrigger()
         // Hide synchronously. A pending permission dialog/start must never reopen it.
@@ -282,6 +284,7 @@ final class EffectCoordinator {
         awaitingPresentation = model.configuration.animationMode == .perspective && !model.liveReduceMotion
         presentationStart = nil
         if awaitingPresentation { renderer.progress = 0 }
+        PerformanceRun.shared?.record("overlay-show")
         overlay.show(renderer: renderer, on: screen)
         model.status = target?.source == .liveDesktop ? "Live desktop · on this Mac only" : "Bundled image preview"
     }

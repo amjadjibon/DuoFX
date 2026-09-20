@@ -18,7 +18,9 @@ export const metadata: Metadata = {
     siteName: site.name,
     title: `${site.name} — ${site.tagline}`,
     description: site.description,
-    images: [{ url: "/og.png", width: 1200, height: 630, alt: `${site.name} perspective animation` }],
+    images: [
+      { url: "/og.png", width: 1200, height: 630, alt: `${site.name} perspective animation` },
+    ],
   },
   twitter: {
     card: "summary_large_image",
@@ -34,6 +36,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${geist.variable} antialiased`} suppressHydrationWarning>
       <head>
+        {/* biome-ignore lint/security/noDangerouslySetInnerHtml: themeScript is a
+            build-time constant with no interpolated input, and it has to run before
+            first paint to set the theme without a flash. */}
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body className="font-[family-name:var(--font-geist)] min-h-dvh">{children}</body>

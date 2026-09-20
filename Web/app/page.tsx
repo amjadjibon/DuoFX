@@ -133,9 +133,7 @@ function Hero() {
             See how it looks
           </a>
         </div>
-        <p className="mt-5 text-sm text-muted">
-          Free and open source · Version {site.version}
-        </p>
+        <p className="mt-5 text-sm text-muted">Free and open source · Version {site.version}</p>
       </div>
       <div className="relative mx-auto mt-16 max-w-5xl">
         <Shot
@@ -153,10 +151,7 @@ function Modes() {
     <Section id="modes" eyebrow="Animations" title="Three ways to close.">
       <div className="mt-16 flex flex-col gap-20">
         {modes.map((mode, i) => (
-          <div
-            key={mode.name}
-            className="grid items-center gap-8 lg:grid-cols-5 lg:gap-14"
-          >
+          <div key={mode.name} className="grid items-center gap-8 lg:grid-cols-5 lg:gap-14">
             <div className={i % 2 === 1 ? "lg:order-2 lg:col-span-3" : "lg:col-span-3"}>
               <Shot src={mode.shot} alt={`${mode.name} animation in DuoFX`} />
             </div>
@@ -182,7 +177,10 @@ function Customize() {
         <Shot src="/shots/5-settings.webp" alt="The DuoFX settings window" />
       </div>
       <div className="mt-14 hidden dark:block">
-        <Shot src="/shots/5-settings-dark.webp" alt="The DuoFX settings window in dark appearance" />
+        <Shot
+          src="/shots/5-settings-dark.webp"
+          alt="The DuoFX settings window in dark appearance"
+        />
       </div>
     </Section>
   );
@@ -246,8 +244,8 @@ function Install() {
           Free and open source.
         </h2>
         <p className="mt-5 leading-relaxed text-muted text-pretty">
-          DuoFX is {site.license} licensed. No purchase, no license key, no account. Install it
-          with Homebrew, or download the DMG from GitHub and drag it to Applications.
+          DuoFX is {site.license} licensed. No purchase, no license key, no account. Install it with
+          Homebrew, or download the DMG from GitHub and drag it to Applications.
         </p>
 
         <div className="mt-10">

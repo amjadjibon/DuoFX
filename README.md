@@ -171,8 +171,8 @@ Signing and notarization are the same as `scripts/package.sh`: uploading to GitH
 
 ## License
 
-DuoFX is licensed under the [Apache License 2.0](LICENSE).
-Third-party components retain their respective licenses; see [NOTICE](NOTICE).
+DuoFX is proprietary, all-rights-reserved software; see [LICENSE](LICENSE).
+Third-party components retain their respective open-source licenses; see [NOTICE](NOTICE).
 The license and attribution notices are included in the app bundle.
 
 ## Attribution

@@ -344,8 +344,23 @@ function Requirements() {
           <div>
             <dt className="font-medium">Why does it ask for Screen Recording?</dt>
             <dd className="mt-1 text-muted text-pretty">
-              To blur your real desktop, macOS requires the Screen Recording permission. The bundled
-              sample desktop and the whole preview work without granting it.
+              To blur your real desktop, DuoFX has to read it, and macOS gates that behind the
+              Screen Recording permission. You can try every animation before deciding: the bundled
+              sample desktop and the whole Settings preview work with nothing granted.
+            </dd>
+          </div>
+          <div>
+            <dt className="font-medium">
+              The macOS prompt mentions system audio. Does DuoFX record audio?
+            </dt>
+            <dd className="mt-1 text-muted text-pretty">
+              No. That prompt is written for the whole capture API, not for this app, which is why
+              it mentions audio and &ldquo;bypassing the private window picker&rdquo;. DuoFX sets{" "}
+              <code className="font-mono text-[0.92em] text-body">capturesAudio = false</code> and{" "}
+              <code className="font-mono text-[0.92em] text-body">showsCursor = false</code>, and
+              excludes its own windows from capture. Bypassing the picker simply means it reads the
+              display continuously instead of asking you to re-pick a window every time, which is
+              what lets the animation follow your lid. The source is public if you want to check.
             </dd>
           </div>
         </dl>

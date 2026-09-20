@@ -16,6 +16,21 @@ xattr -dr com.apple.quarantine /Applications/DuoFX.app
 
 A Homebrew cask is prepared but not published, because Homebrew quarantines what a cask installs and there is no way for the user to approve it the way right-click Open does. See [Homebrew tap](#homebrew-tap).
 
+### Screen Recording permission
+
+To blur your real desktop DuoFX has to read it, so macOS asks for Screen Recording the first time you enable the effect. The system prompt is worded for the whole capture API rather than for this app, and says DuoFX wants to "bypass the system private window picker and directly access your screen and audio", including system audio.
+
+What DuoFX actually does, all verifiable in [`ScreenCaptureService.swift`](DuoFX/Capture/ScreenCaptureService.swift):
+
+- `capturesAudio = false`. No audio is ever requested, recorded, or routed anywhere.
+- `showsCursor = false`. The pointer is not captured.
+- The content filter targets the built-in display and excludes DuoFX's own windows, so the effect never captures itself.
+- Frames live in memory only for the moment they are drawn. Nothing is written to disk and nothing leaves the Mac; DuoFX makes no network requests at all.
+
+"Bypassing the private window picker" means DuoFX captures the display continuously instead of making you re-pick a window every time, which is what lets the animation follow the lid. Capture stops when the overlay is hidden, when paused, on sleep, lock, or session switch, and on quit.
+
+You can explore every animation before deciding. The bundled sample desktop and the entire Settings preview work with no permission granted. Revoke it whenever you like in **System Settings → Privacy & Security → Screen Recording**.
+
 ## Run
 
 Build a Release DMG, install it into `/Applications`, and launch DuoFX with one command:

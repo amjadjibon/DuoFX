@@ -1,0 +1,387 @@
+import Image from "next/image";
+import { site } from "@/site.config";
+import { ThemeToggle } from "./theme-toggle";
+
+const modes = [
+  {
+    name: "Blur sweep",
+    shot: "/shots/2-blur-sweep.webp",
+    blurb:
+      "A clean line of blur travels with the lid. Your desktop keeps its exact coordinates, so everything stays where you left it.",
+  },
+  {
+    name: "Soft fold",
+    shot: "/shots/3-soft-fold.webp",
+    blurb:
+      "Blur builds continuously behind the leading edge, followed by a deepening shadow — the screen dimming as it folds toward the hinge.",
+  },
+  {
+    name: "Perspective",
+    shot: "/shots/1-perspective-hero.webp",
+    blurb:
+      "The captured desktop tilts toward the hinge over a dark backdrop, edges fading into black. Opening the lid reverses the same path.",
+  },
+];
+
+const details = [
+  {
+    title: "Reads the real lid sensor",
+    body: "Follows your MacBook’s built-in lid-angle sensor, calibrated to whatever you consider open. Manual control is always available as a fallback.",
+  },
+  {
+    title: "Up to 120 FPS",
+    body: "Visible animation follows Metal’s display refresh callbacks, requesting up to 120 FPS on ProMotion displays.",
+  },
+  {
+    title: "Any direction",
+    body: "Top, bottom, left, or right. The hinge anchors to the destination edge, and opening the lid plays the motion in reverse.",
+  },
+  {
+    title: "Your own presets",
+    body: "Save appearance and sound together under a name, then apply it anytime. Your lid calibration is never overwritten.",
+  },
+  {
+    title: "Optional sound",
+    body: "A soft whoosh for opening and closing, off by default, with its own volume. It never touches your system volume.",
+  },
+  {
+    title: "Respects Reduce Motion",
+    body: "Follows the macOS accessibility setting by default, with manual overrides, swapping the animation for an even blur fade.",
+  },
+];
+
+export default function Home() {
+  return (
+    <div className="flex min-h-dvh flex-col">
+      <Header />
+      <main className="flex-1">
+        <Hero />
+        <Modes />
+        <Customize />
+        <Privacy />
+        <Details />
+        <Pricing />
+        <Requirements />
+      </main>
+      <Footer />
+    </div>
+  );
+}
+
+function Header() {
+  return (
+    <header className="sticky top-0 z-50 border-b border-line/70 bg-ink/80 backdrop-blur-xl">
+      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
+        <a href="#top" className="flex items-center gap-2.5">
+          <Image src="/logo.png" alt="" width={26} height={26} className="rounded-[6px]" />
+          <span className="text-[15px] font-semibold tracking-tight">{site.name}</span>
+        </a>
+        <nav className="flex items-center gap-5 text-sm text-muted sm:gap-7">
+          <a href="#modes" className="hidden transition-colors hover:text-body sm:block">
+            Modes
+          </a>
+          <a href="#privacy" className="hidden transition-colors hover:text-body sm:block">
+            Privacy
+          </a>
+          <a href="#pricing" className="hidden transition-colors hover:text-body sm:block">
+            Pricing
+          </a>
+          <ThemeToggle />
+          <a
+            href={site.checkoutUrl}
+            className="rounded-full bg-accent px-4 py-1.5 text-[13px] font-semibold text-accent-fg transition-opacity hover:opacity-90"
+          >
+            Get {site.name}
+          </a>
+        </nav>
+      </div>
+    </header>
+  );
+}
+
+function Hero() {
+  return (
+    <section id="top" className="relative overflow-hidden px-6 pt-20 pb-16 sm:pt-28">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute top-[-14rem] left-1/2 h-[30rem] w-[52rem] -translate-x-1/2 rounded-full bg-accent/12 blur-[120px]"
+      />
+      <div className="relative mx-auto max-w-3xl text-center">
+        <p className="inline-flex items-center gap-2 rounded-full border border-line bg-surface px-3.5 py-1.5 text-xs text-muted">
+          <span className="size-1.5 rounded-full bg-accent" />
+          macOS menu-bar app · {site.requirements}
+        </p>
+        <h1 className="mt-7 text-5xl font-semibold tracking-[-0.03em] text-balance sm:text-7xl">
+          {site.tagline}
+        </h1>
+        <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-muted text-pretty sm:text-xl">
+          DuoFX animates your desktop as your MacBook’s lid closes — a blur sweep, a progressive
+          fold, or a cinematic perspective tilt. Every frame is rendered and discarded on your Mac.
+        </p>
+        <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
+          <a
+            href={site.checkoutUrl}
+            className="w-full rounded-full bg-accent px-7 py-3.5 text-[15px] font-semibold text-accent-fg transition-opacity hover:opacity-90 sm:w-auto"
+          >
+            Download for macOS
+          </a>
+          <a
+            href="#modes"
+            className="w-full rounded-full border border-line bg-surface px-7 py-3.5 text-[15px] font-medium text-body transition-colors hover:border-muted/40 sm:w-auto"
+          >
+            See how it looks
+          </a>
+        </div>
+        <p className="mt-5 text-sm text-muted">
+          Pay what you want, from $0 · Version {site.version}
+        </p>
+      </div>
+      <div className="relative mx-auto mt-16 max-w-5xl">
+        <Shot
+          src="/shots/1-perspective-hero.webp"
+          alt="DuoFX tilting the desktop toward the hinge as the lid closes"
+          priority
+        />
+      </div>
+    </section>
+  );
+}
+
+function Modes() {
+  return (
+    <Section id="modes" eyebrow="Animations" title="Three ways to close.">
+      <div className="mt-16 flex flex-col gap-20">
+        {modes.map((mode, i) => (
+          <div
+            key={mode.name}
+            className="grid items-center gap-8 lg:grid-cols-5 lg:gap-14"
+          >
+            <div className={i % 2 === 1 ? "lg:order-2 lg:col-span-3" : "lg:col-span-3"}>
+              <Shot src={mode.shot} alt={`${mode.name} animation in DuoFX`} />
+            </div>
+            <div className={i % 2 === 1 ? "lg:order-1 lg:col-span-2" : "lg:col-span-2"}>
+              <h3 className="text-2xl font-semibold tracking-tight">{mode.name}</h3>
+              <p className="mt-3 leading-relaxed text-muted text-pretty">{mode.blurb}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </Section>
+  );
+}
+
+function Customize() {
+  return (
+    <Section
+      eyebrow="Settings"
+      title="Tune it until it feels right."
+      lead="Blur radius, edge softness, dimming, motion easing, tilt strength, edge fade, fold shadow, transition width — each one is a slider with a live preview that needs no permissions."
+    >
+      <div className="mt-14 dark:hidden">
+        <Shot src="/shots/5-settings.webp" alt="The DuoFX settings window" />
+      </div>
+      <div className="mt-14 hidden dark:block">
+        <Shot src="/shots/5-settings-dark.webp" alt="The DuoFX settings window in dark appearance" />
+      </div>
+    </Section>
+  );
+}
+
+function Privacy() {
+  return (
+    <section id="privacy" className="px-6 py-24">
+      <div className="mx-auto max-w-4xl rounded-3xl border border-line bg-surface p-10 sm:p-14">
+        <svg
+          aria-hidden
+          viewBox="0 0 24 24"
+          fill="none"
+          className="size-7 text-accent"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M12 2.5 4.5 5.5v6c0 4.4 3.1 8.5 7.5 10 4.4-1.5 7.5-5.6 7.5-10v-6L12 2.5Z" />
+          <path d="M9.5 12.2l1.9 1.9 3.6-3.8" />
+        </svg>
+        <h2 className="mt-5 text-3xl font-semibold tracking-tight sm:text-4xl">
+          On this Mac only.
+        </h2>
+        <p className="mt-5 leading-relaxed text-muted text-pretty">
+          Frames are captured, blurred, and discarded in memory. Nothing is written to disk, nothing
+          is uploaded, and there is no analytics, no telemetry, and no audio recording. Mouse input
+          always passes through to the desktop underneath.
+        </p>
+        <p className="mt-4 leading-relaxed text-muted text-pretty">
+          The single network request DuoFX makes is activating and validating your license — and
+          once validated, it keeps working offline.
+        </p>
+      </div>
+    </section>
+  );
+}
+
+function Details() {
+  return (
+    <Section eyebrow="Details" title="Built like a native app, because it is one.">
+      <dl className="mt-14 grid gap-x-10 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
+        {details.map((item) => (
+          <div key={item.title}>
+            <dt className="text-[15px] font-semibold">{item.title}</dt>
+            <dd className="mt-2 text-sm leading-relaxed text-muted text-pretty">{item.body}</dd>
+          </div>
+        ))}
+      </dl>
+    </Section>
+  );
+}
+
+function Pricing() {
+  return (
+    <section id="pricing" className="px-6 py-24">
+      <div className="mx-auto max-w-xl text-center">
+        <p className="text-sm font-medium tracking-[0.18em] text-accent uppercase">Pricing</p>
+        <h2 className="mt-4 text-4xl font-semibold tracking-tight sm:text-5xl">
+          Pay what you want.
+        </h2>
+        <p className="mt-5 leading-relaxed text-muted text-pretty">
+          DuoFX is a one-time purchase with a {site.suggestedPrice} suggested price and a $0
+          minimum. Take it for free if you like, or pay what it is worth to you — both get the same
+          app.
+        </p>
+        <div className="mt-10 rounded-3xl border border-line bg-surface p-8 text-left">
+          <ul className="space-y-3.5 text-[15px]">
+            {[
+              "The full app — every animation, no locked features",
+              "A license key, delivered by email at checkout",
+              "Activate it on your Mac, move it whenever you like",
+              "No subscription, no account, no tracking",
+            ].map((line) => (
+              <li key={line} className="flex gap-3">
+                <svg
+                  aria-hidden
+                  viewBox="0 0 20 20"
+                  fill="none"
+                  className="mt-0.5 size-5 shrink-0 text-accent"
+                  stroke="currentColor"
+                  strokeWidth="1.75"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="m4.5 10.5 3.5 3.5 7.5-8" />
+                </svg>
+                <span className="text-muted">{line}</span>
+              </li>
+            ))}
+          </ul>
+          <a
+            href={site.checkoutUrl}
+            className="mt-8 block rounded-full bg-accent px-7 py-3.5 text-center text-[15px] font-semibold text-accent-fg transition-opacity hover:opacity-90"
+          >
+            Get {site.name}
+          </a>
+          <p className="mt-4 text-center text-xs text-muted">
+            Secure checkout by Lemon Squeezy · {site.requirements}
+          </p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function Requirements() {
+  return (
+    <section className="px-6 pb-24">
+      <div className="mx-auto max-w-3xl border-t border-line pt-12">
+        <h2 className="text-lg font-semibold">Before you buy</h2>
+        <dl className="mt-6 space-y-5 text-sm leading-relaxed">
+          <div>
+            <dt className="font-medium">Which Macs does it run on?</dt>
+            <dd className="mt-1 text-muted text-pretty">
+              macOS 14 Sonoma or later on Apple silicon. The lid animation needs a MacBook; on a
+              desktop Mac you can still drive the effect manually.
+            </dd>
+          </div>
+          <div>
+            <dt className="font-medium">Does the lid sensor work on every MacBook?</dt>
+            <dd className="mt-1 text-muted text-pretty">
+              Sensor availability is model-dependent, since Apple does not document the interface.
+              DuoFX reports exactly what it finds in Settings, and manual control works everywhere.
+            </dd>
+          </div>
+          <div>
+            <dt className="font-medium">Why does it ask for Screen Recording?</dt>
+            <dd className="mt-1 text-muted text-pretty">
+              To blur your real desktop, macOS requires the Screen Recording permission. The bundled
+              sample desktop and the whole preview work without granting it.
+            </dd>
+          </div>
+        </dl>
+      </div>
+    </section>
+  );
+}
+
+function Footer() {
+  return (
+    <footer className="border-t border-line px-6 py-10">
+      <div className="mx-auto flex max-w-6xl flex-col gap-4 text-sm text-muted sm:flex-row sm:items-center sm:justify-between">
+        <p>
+          © {new Date().getFullYear()}{" "}
+          <a href={site.author.url} className="transition-colors hover:text-body">
+            {site.author.name}
+          </a>
+          . All rights reserved.
+        </p>
+        <p className="text-xs">
+          Contains code from LidAngleSensor (Apache-2.0) and iphone-duo (MIT).
+        </p>
+      </div>
+    </footer>
+  );
+}
+
+function Section({
+  id,
+  eyebrow,
+  title,
+  lead,
+  children,
+}: {
+  id?: string;
+  eyebrow: string;
+  title: string;
+  lead?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section id={id} className="px-6 py-24">
+      <div className="mx-auto max-w-6xl">
+        <p className="text-sm font-medium tracking-[0.18em] text-accent uppercase">{eyebrow}</p>
+        <h2 className="mt-4 max-w-3xl text-4xl font-semibold tracking-tight text-balance sm:text-5xl">
+          {title}
+        </h2>
+        {lead ? (
+          <p className="mt-5 max-w-2xl leading-relaxed text-muted text-pretty">{lead}</p>
+        ) : null}
+        {children}
+      </div>
+    </section>
+  );
+}
+
+function Shot({ src, alt, priority }: { src: string; alt: string; priority?: boolean }) {
+  return (
+    <div className="overflow-hidden rounded-2xl border border-line bg-surface-2 shadow-2xl shadow-shot-shadow">
+      <Image
+        src={src}
+        alt={alt}
+        width={1600}
+        height={1200}
+        priority={priority}
+        sizes="(min-width: 1024px) 60rem, 100vw"
+        className="w-full"
+      />
+    </div>
+  );
+}

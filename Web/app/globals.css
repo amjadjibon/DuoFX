@@ -1,0 +1,79 @@
+@import "tailwindcss";
+
+@custom-variant dark ([data-theme="dark"] &);
+
+:root {
+  --ink: #fbfcfc;
+  --surface: #ffffff;
+  --surface-2: #f3f6f6;
+  --line: #e1e7e8;
+  --body: #0c1315;
+  --muted: #5a6a6d;
+  --accent: #17706d;
+  --accent-fg: #ffffff;
+  --shot-shadow: rgb(12 19 21 / 0.14);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ink: #06080a;
+    --surface: #0d1113;
+    --surface-2: #131819;
+    --line: #1e2527;
+    --body: #e6ecec;
+    --muted: #8f9fa1;
+    --accent: #5cc7c2;
+    --accent-fg: #06080a;
+    --shot-shadow: rgb(0 0 0 / 0.6);
+  }
+}
+
+[data-theme="dark"] {
+  --ink: #06080a;
+  --surface: #0d1113;
+  --surface-2: #131819;
+  --line: #1e2527;
+  --body: #e6ecec;
+  --muted: #8f9fa1;
+  --accent: #5cc7c2;
+  --accent-fg: #06080a;
+  --shot-shadow: rgb(0 0 0 / 0.6);
+}
+
+@theme inline {
+  --color-ink: var(--ink);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-line: var(--line);
+  --color-body: var(--body);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-fg: var(--accent-fg);
+  --color-shot-shadow: var(--shot-shadow);
+}
+
+html {
+  scroll-behavior: smooth;
+  background-color: var(--ink);
+  color-scheme: light;
+}
+
+:root:not([data-theme="light"]) {
+  @media (prefers-color-scheme: dark) {
+    color-scheme: dark;
+  }
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+body {
+  background-color: var(--ink);
+  color: var(--body);
+}
+
+::selection {
+  background-color: var(--accent);
+  color: var(--accent-fg);
+}

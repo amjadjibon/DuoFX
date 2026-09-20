@@ -252,9 +252,6 @@ function Install() {
 
         <div className="mt-10">
           <InstallCommand command={site.brewCommand} />
-          <p className="mt-2.5 text-xs text-muted">
-            The Homebrew cask ships with the first notarized release. Until then, use the DMG.
-          </p>
         </div>
 
         <div className="mt-6 flex flex-col gap-3 sm:flex-row">

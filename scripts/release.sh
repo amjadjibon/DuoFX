@@ -112,6 +112,12 @@ codesign --verify --deep --strict "$app"
 [[ -s build/DuoFX.dmg ]] || die 'Packaging did not produce a DMG.'
 cp build/DuoFX.dmg "$asset"
 (cd build && shasum -a 256 "$asset_name") > "$checksum"
+# Emit the Homebrew cask for this exact asset so the tap is never hand-edited
+# with a stale version or checksum.
+sha=$(awk '{print $1}' "$checksum")
+sed -e "s/^  version \".*\"$/  version \"${tag#v}\"/" \
+    -e "s/^  sha256 \".*\"$/  sha256 \"$sha\"/" Casks/duofx.rb > build/duofx.rb
+printf 'Cask for the tap written to build/duofx.rb\n'
 # Prepare the body separately so even a notes-file path matching the output is
 # read completely before replacement. Keep the finished Markdown for review.
 notes_temp=$(mktemp build/.release-notes.XXXXXX)

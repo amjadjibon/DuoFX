@@ -19,8 +19,10 @@ class ReleaseTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
-        for folder in ("scripts", "DuoFX", "bin"):
+        for folder in ("scripts", "DuoFX", "bin", "Casks"):
             (self.root / folder).mkdir()
+        (self.root / "Casks/duofx.rb").write_text(
+            'cask "duofx" do\n  version "0.0.0"\n  sha256 "deadbeef"\n  app "DuoFX.app"\nend\n')
         shutil.copy(SOURCE, self.root / "scripts/release.sh")
         (self.root / "DuoFX/Info.plist").write_bytes(plistlib.dumps({"CFBundleShortVersionString": "0.1.0"}))
         (self.root / "scripts/package.sh").write_text('''#!/bin/bash
@@ -82,7 +84,16 @@ elif tool != "codesign": sys.exit(91)
         self.assertIn("not support Intel Macs", description)
         self.assertIn("compatible lid-angle sensor", description)
         checksum = self.root / "build/DuoFX-v0.1.0-arm64.dmg.sha256"
-        self.assertEqual(checksum.read_text().split(), [hashlib.sha256(b"fixture dmg").hexdigest(), "DuoFX-v0.1.0-arm64.dmg"])
+        digest = hashlib.sha256(b"fixture dmg").hexdigest()
+        self.assertEqual(checksum.read_text().split(), [digest, "DuoFX-v0.1.0-arm64.dmg"])
+        cask = (self.root / "build/duofx.rb").read_text()
+        self.assertIn('version "0.1.0"', cask)
+        self.assertIn(f'sha256 "{digest}"', cask)
+        self.assertIn('app "DuoFX.app"', cask)
+
+    def test_cask_version_drops_the_tag_prefix_for_a_prerelease(self):
+        self.assertEqual(self.run_release("v0.1.0-beta.1").returncode, 0)
+        self.assertIn('version "0.1.0-beta.1"', (self.root / "build/duofx.rb").read_text())
 
     def test_draft_prerelease_and_notes_path_with_spaces(self):
         notes = self.root / "release notes.md"

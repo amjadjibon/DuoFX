@@ -4,6 +4,14 @@ A native macOS menu-bar app that animates the built-in desktop as a MacBook lid 
 
 Requires **macOS 14 or later, Apple silicon, and Xcode 15 or later**. Build and automated validation were performed with Xcode 26.6. Physical sensor support depends on the Mac's HID interface; manual preview is available independently.
 
+## Install
+
+```sh
+brew install --cask amjadjibon/tap/duofx
+```
+
+Or download the DMG from [Releases](https://github.com/amjadjibon/DuoFX/releases/latest), open it, and drag DuoFX to Applications.
+
 ## Run
 
 Build a Release DMG, install it into `/Applications`, and launch DuoFX with one command:
@@ -79,11 +87,7 @@ When upgrading from an old build, quit DuoFX, remove its existing entry from **S
 
 All captured content stays on the device in memory: DuoFX has no analytics, audio recording, or frame-saving functionality, and never uploads a frame. Blur sweep and Soft fold leave the uncovered desktop transparent and preserve desktop coordinates. Perspective covers the original desktop with the tilted capture and a black backdrop. Settings and menu controls remain above all effects; mouse input always passes through to the original desktop positions.
 
-The only network activity DuoFX performs is license activation and validation, described below.
-
-## Purchasing
-
-DuoFX is a one-time purchase. **Settings → License** shows **Buy a license…**, which opens the Lemon Squeezy checkout page, and a field to activate the license key emailed after purchase. Activation and validation call Lemon Squeezy's License API directly (no separate account or backend); a validated license stays active offline for up to 14 days before DuoFX asks to reconnect. **Deactivate this Mac…** frees the license for use on another Mac. **Enable effect** is blocked, with a link back to this section, until a license is activated.
+DuoFX makes no network requests of any kind.
 
 ## Validation
 
@@ -169,9 +173,22 @@ The script rebuilds the DMG, checks the signature and app version, and uploads `
 
 Signing and notarization are the same as `scripts/package.sh`: uploading to GitHub does not notarize the app. `--dry-run` prints the plan without building or accessing GitHub. Run `python3 scripts/test-release.py` to test release orchestration with fake build/GitHub commands; no release is published by those tests.
 
+## Homebrew tap
+
+`Casks/duofx.rb` is the cask source. Its committed `version` and `sha256` are placeholders; `scripts/release.sh` writes `build/duofx.rb` with the real values for the asset it just uploaded. Publish that file to the tap repository (`github.com/amjadjibon/homebrew-tap`) as `Casks/duofx.rb`:
+
+```bash
+cp build/duofx.rb ../homebrew-tap/Casks/duofx.rb
+cd ../homebrew-tap && git commit -am "duofx 0.1.0" && git push
+```
+
+Then `brew install --cask amjadjibon/tap/duofx` resolves. Verify with `brew audit --cask --online amjadjibon/tap/duofx` before pushing.
+
+Homebrew quarantines downloaded apps, so **the DMG must be Developer ID signed and notarized** or `brew install` will place an app that macOS refuses to open. A locally packaged DMG is not sufficient for the tap.
+
 ## License
 
-DuoFX is proprietary, all-rights-reserved software; see [LICENSE](LICENSE).
+DuoFX is licensed under the Apache License, Version 2.0; see [LICENSE](LICENSE).
 Third-party components retain their respective open-source licenses; see [NOTICE](NOTICE).
 The license and attribution notices are included in the app bundle.
 

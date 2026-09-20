@@ -99,22 +99,6 @@ final class SettingsTests: XCTestCase {
     }
 
     @MainActor
-    func testRequestEnableRequiresLicense() throws {
-        let suite = "DuoFXLicenseGate.\(UUID().uuidString)"
-        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
-        let model = AppModel(defaults: defaults)
-        model.requestEnable(true)
-        XCTAssertFalse(model.isEnabled)
-        XCTAssertNotNil(model.errorMessage)
-        defaults.set("KEY", forKey: "license.key")
-        let licensed = AppModel(defaults: defaults)
-        licensed.requestEnable(true)
-        XCTAssertTrue(licensed.isEnabled)
-        licensed.requestEnable(false)
-        XCTAssertFalse(licensed.isEnabled)
-    }
-    @MainActor
     func testExplicitManualPreviewChoiceSurvivesRelaunch() throws {
         let suite = "DuoFXTests.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))

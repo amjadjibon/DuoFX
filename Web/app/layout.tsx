@@ -41,7 +41,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             first paint to set the theme without a flash. */}
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
-      <body className="font-[family-name:var(--font-geist)] min-h-dvh">{children}</body>
+      <body className="font-(family-name:--font-geist) min-h-dvh">{children}</body>
     </html>
   );
 }

@@ -26,7 +26,7 @@ Click the **folding-laptop icon in the top menu bar** for **Enable effect**, **P
 
 Open `DuoFX.xcodeproj`, select the **DuoFX** scheme and **My Mac**, and Run. The app appears as a laptop icon in the menu bar. The project and scripts use an **Apple Development** certificate from your keychain so macOS can recognize the same application across rebuilds. Create one through Xcode's account settings if needed. To choose a particular existing certificate, set `SIGNING_IDENTITY` to its name or fingerprint when running the build script.
 
-The build script writes the chosen certificate fingerprint and team to ignored `Signing.local.xcconfig`. Xcode also reads this file through `Signing.xcconfig`. Run `python3 scripts/configure-signing.py` once before building directly from a fresh Xcode checkout, or select your certificate/team in Xcode. The script uses existing keychain identities and never creates or exports private keys.
+The build script writes the chosen certificate fingerprint and team to ignored `Signing.local.xcconfig`. Xcode also reads this file through `Build.xcconfig`. Run `python3 scripts/configure-signing.py` once before building directly from a fresh Xcode checkout, or select your certificate/team in Xcode. The script uses existing keychain identities and never creates or exports private keys.
 
 Or build the app from Terminal:
 
@@ -150,22 +150,28 @@ After adding source files, regenerate the checked-in Xcode project with `python3
 
 `bash scripts/package.sh` creates `build/DuoFX.dmg` containing the Release app and an Applications link. This is a **local development build**, signed with Apple Development and not notarized.
 
+## Versioning
+
+No version is stored in the source tree. `scripts/configure-version.py` runs as part of every build and writes ignored `Version.local.xcconfig` from git: `MARKETING_VERSION` comes from the nearest tag and `CURRENT_PROJECT_VERSION` from the commit count, which `DuoFX/Info.plist` reads as `CFBundleShortVersionString` and `CFBundleVersion`.
+
+A checkout with no tags stamps `0.0.0`, and `scripts/release.sh` creates the tag before it builds so a release always carries the version it is named after. Because `CFBundleShortVersionString` accepts at most three dot-separated integers, a prerelease tag such as `v0.2.0-beta.1` stamps the bundle `0.2.0`; the release and the Homebrew cask keep the full tag.
+
 To install an existing DMG without rebuilding, use `./scripts/install.sh build/DuoFX.dmg`. You can also open the DMG in Finder, drag DuoFX to Applications, and launch it there.
 
 For distribution, use your Apple Developer team and Developer ID Application certificate in Xcode, archive the Release scheme, export with Developer ID signing and hardened runtime, notarize with `xcrun notarytool submit --wait`, and staple with `xcrun stapler staple`. Create a DMG from that signed and stapled app and validate it on another supported Mac. Developer ID signing, notarization, and installation on a second Mac require credentials/hardware and are not performed by the local packaging script. Launch at login is not included.
 
 ## GitHub releases
 
-Use `scripts/release.sh` on your build Mac with Xcode, the existing signing setup, and [GitHub CLI](https://cli.github.com/manual/gh_release_create). Set `CFBundleShortVersionString` and increment `CFBundleVersion` in `DuoFX/Info.plist` for a new version, then commit and push your changes to `origin`.
+Use `scripts/release.sh` on your build Mac with Xcode, the existing signing setup, and [GitHub CLI](https://cli.github.com/manual/gh_release_create). The tag is the version, so there is nothing to bump or commit first — just push the commit you want to release.
 
 ```bash
 gh auth login
 git push origin HEAD
-./scripts/release.sh --dry-run
-./scripts/release.sh --draft
+./scripts/release.sh v0.1.0 --dry-run
+./scripts/release.sh v0.1.0 --draft
 ```
 
-Omit `--draft` to publish immediately. The tag defaults to the app version (currently `v0.1.0`). You can pass an explicit matching tag, use `--prerelease`, or supply notes with `--notes-file /path/to/release-notes.md`; otherwise GitHub generates release notes. For example, `./scripts/release.sh v0.1.0-beta.1 --draft` creates a draft prerelease.
+Omit `--draft` to publish immediately. The tag is required. Use `--prerelease` or supply notes with `--notes-file /path/to/release-notes.md`; otherwise GitHub generates release notes. For example, `./scripts/release.sh v0.1.0-beta.1 --draft` creates a draft prerelease.
 
 Every release description starts with compatibility details: Apple silicon (M-series, arm64), macOS 14 Sonoma or later, no Intel support in this DMG, and model-dependent MacBook lid-sensor availability. Custom notes are appended after that section; generated GitHub notes follow it when no notes file is supplied. The prepared description is saved as `build/DuoFX-<tag>-release-notes.md`.
 

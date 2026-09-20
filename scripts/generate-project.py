@@ -43,7 +43,7 @@ for path in sorted((root / "DuoFX").rglob("*")) + [root / "LICENSE", root / "NOT
     build = add(rel + ":build", f"isa = PBXBuildFile; fileRef = {ref};")
     (sources if path.suffix == ".swift" else resources).append(build)
 
-for name in ("README.md", "DESIGN.md", "Package.swift", "Signing.xcconfig"):
+for name in ("README.md", "DESIGN.md", "Package.swift", "Build.xcconfig"):
     file_type = 'lastKnownFileType = text.xcconfig;' if name.endswith(".xcconfig") else ''
     ref = add(name, f'isa = PBXFileReference; {file_type} path = {json.dumps(name)}; sourceTree = SOURCE_ROOT;')
     reference_in_folder(root / name, ref)
@@ -71,7 +71,7 @@ project_configs, target_configs = [], []
 for name in ("Debug", "Release"):
     project_configs.append(add("project:" + name, f'isa = XCBuildConfiguration; name = {name}; buildSettings = {{ MACOSX_DEPLOYMENT_TARGET = 14.0; SDKROOT = macosx; ARCHS = arm64; SWIFT_VERSION = 5.0; CLANG_ENABLE_MODULES = YES; }};'))
     optimization = "-Onone" if name == "Debug" else "-O"
-    target_configs.append(add("target:" + name, f'''isa = XCBuildConfiguration; name = {name}; baseConfigurationReference = {uid("Signing.xcconfig")}; buildSettings = {{
+    target_configs.append(add("target:" + name, f'''isa = XCBuildConfiguration; name = {name}; baseConfigurationReference = {uid("Build.xcconfig")}; buildSettings = {{
         PRODUCT_NAME = DuoFX; PRODUCT_BUNDLE_IDENTIFIER = com.amjadjibon.duofx;
         INFOPLIST_FILE = DuoFX/Info.plist; GENERATE_INFOPLIST_FILE = NO;
         ENABLE_APP_SANDBOX = NO; ENABLE_HARDENED_RUNTIME = YES;

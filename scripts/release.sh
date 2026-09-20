@@ -4,11 +4,13 @@ cd "$(dirname "$0")/.."
 
 usage() {
   cat <<'EOF'
-Usage: scripts/release.sh [vX.Y.Z[-suffix]] [--draft] [--prerelease]
+Usage: scripts/release.sh vX.Y.Z[-suffix] [--draft] [--prerelease]
                           [--notes-file PATH] [--tap OWNER/REPO] [--dry-run]
 
 Build a fresh Release DMG and upload it with a SHA-256 checksum to GitHub.
-The tag defaults to v + CFBundleShortVersionString in DuoFX/Info.plist.
+The tag is the only source of the version: it is created before the build so
+scripts/configure-version.py stamps the bundle from it. Nothing records a
+version in the source tree, so there is no version file to bump or commit.
 Requires a clean checkout, HEAD pushed to origin, gh authentication, and Xcode.
 Existing releases are never overwritten. Existing tags must point to HEAD.
 
@@ -23,6 +25,21 @@ EOF
 }
 
 die() { printf 'Error: %s\n' "$*" >&2; exit 1; }
+tag_created=false
+notes_temp=''
+# A single EXIT trap: a second `trap ... EXIT` would silently replace this one
+# and the tag would survive a failed release.
+cleanup() {
+  local status=$?
+  if [[ -n "$notes_temp" ]]; then rm -f "$notes_temp"; fi
+  # Never leave a local tag behind for a release that did not ship, or the next
+  # attempt fails its own "tag already exists" check.
+  if [[ "$tag_created" == true && $status -ne 0 ]]; then
+    git tag -d "$tag" >/dev/null 2>&1 || true
+  fi
+  return $status
+}
+trap cleanup EXIT
 compatibility_notes() {
   cat <<'EOF'
 ## Compatibility
@@ -56,10 +73,12 @@ while [[ $# -gt 0 ]]; do
   shift
 done
 
-version=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' DuoFX/Info.plist)
-tag=${tag:-v$version}
+[[ -n "$tag" ]] || { usage >&2; exit 2; }
 [[ "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9][A-Za-z0-9.-]*)?$ ]] || die 'Use a tag such as v0.1.0 or v0.1.0-beta.1.'
-[[ "${tag%%-*}" == "v$version" ]] || die "Tag $tag does not match app version $version. Update Info.plist and commit first."
+version=${tag#v}
+# CFBundleShortVersionString takes at most three dot-separated integers, so the
+# bundle carries the numeric core while the release and cask carry the full tag.
+marketing=${version%%-*}
 [[ -z "$notes_file" || -r "$notes_file" ]] || die "Cannot read release notes: $notes_file"
 if [[ "$tag" == *-* ]]; then prerelease=true; fi
 head_commit=$(git rev-parse HEAD)
@@ -85,7 +104,7 @@ if [[ "$draft" == true ]]; then release_command+=(--draft); fi
 if [[ "$prerelease" == true ]]; then release_command+=(--prerelease); fi
 
 if [[ "$dry_run" == true ]]; then
-  printf 'Build version %s from %s for %s.\n' "$version" "$head_commit" "$repository"
+  printf 'Tag %s at %s, then build version %s for %s.\n' "$tag" "$head_commit" "$marketing" "$repository"
   printf 'Would run: bash scripts/package.sh\n'
   printf 'Would create: %s and %s\n' "$asset" "$checksum"
   printf 'Would run:'; printf ' %q' "${release_command[@]}"; printf '\n'
@@ -113,12 +132,20 @@ remote_commit=$(printf '%s\n' "$remote_tags" | awk '
 if gh release view "$tag" --repo "$repository" >/dev/null 2>&1; then
   die "Release $tag already exists. Choose a new version; releases are not overwritten."
 fi
+! git rev-parse -q --verify "refs/tags/$tag" >/dev/null || die "Tag $tag already exists locally."
+
+# The tag is created before the build because it is what the build reads its
+# version from. cleanup() removes it again if anything below fails.
+git tag -a "$tag" -m "DuoFX $version"
+tag_created=true
 
 bash scripts/package.sh
 [[ "$(git rev-parse HEAD)" == "$head_commit" && -z "$(git status --porcelain)" ]] || die 'Sources changed during the build. Retry from a clean checkout.'
 app='build/Build/Products/Release/DuoFX.app'
 built_version=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$app/Contents/Info.plist")
-[[ "$built_version" == "$version" ]] || die 'Built app version does not match the release.'
+[[ "$built_version" == "$marketing" ]] || die "Built app version $built_version does not match the tag ($marketing)."
+build_number=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$app/Contents/Info.plist")
+[[ "$build_number" == "$(git rev-list --count HEAD)" ]] || die 'Built bundle version was not stamped from git.'
 codesign --verify --deep --strict "$app"
 [[ -s build/DuoFX.dmg ]] || die 'Packaging did not produce a DMG.'
 cp build/DuoFX.dmg "$asset"
@@ -162,13 +189,13 @@ CASK
 # Prepare the body separately so even a notes-file path matching the output is
 # read completely before replacement. Keep the finished Markdown for review.
 notes_temp=$(mktemp build/.release-notes.XXXXXX)
-trap 'rm -f "$notes_temp"' EXIT
 compatibility_notes > "$notes_temp"
 if [[ -n "$notes_file" ]]; then
   printf '\n\n' >> "$notes_temp"
   cat "$notes_file" >> "$notes_temp"
 fi
 mv "$notes_temp" "$release_notes"
+git push --quiet origin "$tag"
 "${release_command[@]}"
 
 # Publish the cask only after the release exists, so the tap never points at a

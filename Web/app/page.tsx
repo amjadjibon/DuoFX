@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { site } from "@/site.config";
+import { InstallCommand } from "./install-command";
 import { ThemeToggle } from "./theme-toggle";
 
 const modes = [
@@ -60,7 +61,7 @@ export default function Home() {
         <Customize />
         <Privacy />
         <Details />
-        <Pricing />
+        <Install />
         <Requirements />
       </main>
       <Footer />
@@ -83,15 +84,21 @@ function Header() {
           <a href="#privacy" className="hidden transition-colors hover:text-body sm:block">
             Privacy
           </a>
-          <a href="#pricing" className="hidden transition-colors hover:text-body sm:block">
-            Pricing
+          <a href="#install" className="hidden transition-colors hover:text-body sm:block">
+            Install
+          </a>
+          <a
+            href={site.repoUrl}
+            className="hidden transition-colors hover:text-body sm:block"
+          >
+            GitHub
           </a>
           <ThemeToggle />
           <a
-            href={site.checkoutUrl}
+            href="#install"
             className="rounded-full bg-accent px-4 py-1.5 text-[13px] font-semibold text-accent-fg transition-opacity hover:opacity-90"
           >
-            Get {site.name}
+            Install
           </a>
         </nav>
       </div>
@@ -120,7 +127,7 @@ function Hero() {
         </p>
         <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
           <a
-            href={site.checkoutUrl}
+            href="#install"
             className="w-full rounded-full bg-accent px-7 py-3.5 text-[15px] font-semibold text-accent-fg transition-opacity hover:opacity-90 sm:w-auto"
           >
             Download for macOS
@@ -133,7 +140,7 @@ function Hero() {
           </a>
         </div>
         <p className="mt-5 text-sm text-muted">
-          Pay what you want, from $0 · Version {site.version}
+          Free and open source · Version {site.version}
         </p>
       </div>
       <div className="relative mx-auto mt-16 max-w-5xl">
@@ -213,8 +220,8 @@ function Privacy() {
           always passes through to the desktop underneath.
         </p>
         <p className="mt-4 leading-relaxed text-muted text-pretty">
-          The single network request DuoFX makes is activating and validating your license — and
-          once validated, it keeps working offline.
+          DuoFX makes no network requests at all — not for licensing, not for updates, not for
+          anything. You can verify that yourself in the source.
         </p>
       </div>
     </section>
@@ -236,26 +243,46 @@ function Details() {
   );
 }
 
-function Pricing() {
+function Install() {
   return (
-    <section id="pricing" className="px-6 py-24">
+    <section id="install" className="px-6 py-24">
       <div className="mx-auto max-w-xl text-center">
-        <p className="text-sm font-medium tracking-[0.18em] text-accent uppercase">Pricing</p>
+        <p className="text-sm font-medium tracking-[0.18em] text-accent uppercase">Install</p>
         <h2 className="mt-4 text-4xl font-semibold tracking-tight sm:text-5xl">
-          Pay what you want.
+          Free and open source.
         </h2>
         <p className="mt-5 leading-relaxed text-muted text-pretty">
-          DuoFX is a one-time purchase with a {site.suggestedPrice} suggested price and a $0
-          minimum. Take it for free if you like, or pay what it is worth to you — both get the same
-          app.
+          DuoFX is {site.license} licensed. No purchase, no license key, no account — install it
+          with Homebrew or grab the DMG straight from GitHub.
         </p>
-        <div className="mt-10 rounded-3xl border border-line bg-surface p-8 text-left">
+
+        <div className="mt-10">
+          <InstallCommand command={site.brewCommand} />
+        </div>
+
+        <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+          <a
+            href={site.releasesUrl}
+            className="w-full rounded-full bg-accent px-7 py-3.5 text-[15px] font-semibold text-accent-fg transition-opacity hover:opacity-90"
+          >
+            Download the DMG
+          </a>
+          <a
+            href={site.repoUrl}
+            className="w-full rounded-full border border-line bg-surface px-7 py-3.5 text-[15px] font-medium text-body transition-colors hover:border-muted/40"
+          >
+            View the source
+          </a>
+        </div>
+        <p className="mt-4 text-xs text-muted">{site.requirements}</p>
+
+        <div className="mt-12 rounded-3xl border border-line bg-surface p-8 text-left">
           <ul className="space-y-3.5 text-[15px]">
             {[
-              "The full app — every animation, no locked features",
-              "A license key, delivered by email at checkout",
-              "Activate it on your Mac, move it whenever you like",
-              "No subscription, no account, no tracking",
+              "Every animation, unlocked — there is no paid tier",
+              "No account, no telemetry, no network requests at all",
+              "Readable source you can audit, fork, and build yourself",
+              "Uninstall cleanly with brew uninstall --zap",
             ].map((line) => (
               <li key={line} className="flex gap-3">
                 <svg
@@ -274,14 +301,15 @@ function Pricing() {
               </li>
             ))}
           </ul>
-          <a
-            href={site.checkoutUrl}
-            className="mt-8 block rounded-full bg-accent px-7 py-3.5 text-center text-[15px] font-semibold text-accent-fg transition-opacity hover:opacity-90"
-          >
-            Get {site.name}
-          </a>
-          <p className="mt-4 text-center text-xs text-muted">
-            Secure checkout by Lemon Squeezy · {site.requirements}
+          <p className="mt-7 border-t border-line pt-6 text-sm leading-relaxed text-muted text-pretty">
+            DuoFX is built and maintained in spare time. If it earns a place in your menu bar,{" "}
+            <a
+              href={site.sponsorUrl}
+              className="font-medium text-body underline decoration-line underline-offset-4 transition-colors hover:decoration-accent"
+            >
+              sponsoring the project
+            </a>{" "}
+            keeps it moving — entirely optional, and it changes nothing about the app.
           </p>
         </div>
       </div>
@@ -293,7 +321,7 @@ function Requirements() {
   return (
     <section className="px-6 pb-24">
       <div className="mx-auto max-w-3xl border-t border-line pt-12">
-        <h2 className="text-lg font-semibold">Before you buy</h2>
+        <h2 className="text-lg font-semibold">Before you install</h2>
         <dl className="mt-6 space-y-5 text-sm leading-relaxed">
           <div>
             <dt className="font-medium">Which Macs does it run on?</dt>
@@ -331,7 +359,11 @@ function Footer() {
           <a href={site.author.url} className="transition-colors hover:text-body">
             {site.author.name}
           </a>
-          . All rights reserved.
+          . Released under {site.license} on{" "}
+          <a href={site.repoUrl} className="transition-colors hover:text-body">
+            GitHub
+          </a>
+          .
         </p>
         <p className="text-xs">
           Contains code from LidAngleSensor (Apache-2.0) and iphone-duo (MIT).

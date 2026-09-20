@@ -71,32 +71,26 @@ export default function Home() {
 
 function Header() {
   return (
-    <header className="sticky top-0 z-50 border-b border-line/70 bg-ink/80 backdrop-blur-xl">
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
-        <a href="#top" className="flex items-center gap-2.5">
-          <Image src="/logo.png" alt="" width={26} height={26} className="rounded-[6px]" />
+    <header className="fixed inset-x-0 top-0 z-50 px-4 pt-3 sm:pt-4">
+      <div className="mx-auto flex h-14 max-w-2xl items-center justify-between gap-4 rounded-full border border-line/80 bg-ink/70 py-2 pr-2 pl-5 shadow-lg shadow-shot-shadow backdrop-blur-xl backdrop-saturate-150">
+        <a href="#top" className="flex shrink-0 items-center gap-2.5">
+          <Image src="/logo.png" alt="" width={24} height={24} className="rounded-[6px]" />
           <span className="text-[15px] font-semibold tracking-tight">{site.name}</span>
         </a>
-        <nav className="flex items-center gap-5 text-sm text-muted sm:gap-7">
+        <nav className="flex items-center gap-5 text-sm text-muted">
           <a href="#modes" className="hidden transition-colors hover:text-body sm:block">
             Modes
           </a>
           <a href="#privacy" className="hidden transition-colors hover:text-body sm:block">
             Privacy
           </a>
-          <a href="#install" className="hidden transition-colors hover:text-body sm:block">
-            Install
-          </a>
-          <a
-            href={site.repoUrl}
-            className="hidden transition-colors hover:text-body sm:block"
-          >
+          <a href={site.repoUrl} className="hidden transition-colors hover:text-body sm:block">
             GitHub
           </a>
           <ThemeToggle />
           <a
             href="#install"
-            className="rounded-full bg-accent px-4 py-1.5 text-[13px] font-semibold text-accent-fg transition-opacity hover:opacity-90"
+            className="rounded-full bg-accent px-4 py-2 text-[13px] font-semibold text-accent-fg transition-opacity hover:opacity-90"
           >
             Install
           </a>
@@ -108,7 +102,7 @@ function Header() {
 
 function Hero() {
   return (
-    <section id="top" className="relative overflow-hidden px-6 pt-20 pb-16 sm:pt-28">
+    <section id="top" className="relative overflow-hidden px-6 pt-28 pb-16 sm:pt-36">
       <div
         aria-hidden
         className="pointer-events-none absolute top-[-14rem] left-1/2 h-[30rem] w-[52rem] -translate-x-1/2 rounded-full bg-accent/12 blur-[120px]"
@@ -196,7 +190,7 @@ function Customize() {
 
 function Privacy() {
   return (
-    <section id="privacy" className="px-6 py-24">
+    <section id="privacy" className="scroll-mt-24 px-6 py-24">
       <div className="mx-auto max-w-4xl rounded-3xl border border-line bg-surface p-10 sm:p-14">
         <svg
           aria-hidden
@@ -245,7 +239,7 @@ function Details() {
 
 function Install() {
   return (
-    <section id="install" className="px-6 py-24">
+    <section id="install" className="scroll-mt-24 px-6 py-24">
       <div className="mx-auto max-w-xl text-center">
         <p className="text-sm font-medium tracking-[0.18em] text-accent uppercase">Install</p>
         <h2 className="mt-4 text-4xl font-semibold tracking-tight sm:text-5xl">
@@ -400,7 +394,7 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section id={id} className="px-6 py-24">
+    <section id={id} className="scroll-mt-24 px-6 py-24">
       <div className="mx-auto max-w-6xl">
         <p className="text-sm font-medium tracking-[0.18em] text-accent uppercase">{eyebrow}</p>
         <h2 className="mt-4 max-w-3xl text-4xl font-semibold tracking-tight text-balance sm:text-5xl">

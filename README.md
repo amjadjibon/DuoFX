@@ -175,16 +175,17 @@ Signing and notarization are the same as `scripts/package.sh`: uploading to GitH
 
 ## Homebrew tap
 
-`Casks/duofx.rb` is the cask source. Its committed `version` and `sha256` are placeholders; `scripts/release.sh` writes `build/duofx.rb` with the real values for the asset it just uploaded. Publish that file to the tap repository (`github.com/amjadjibon/homebrew-tap`) as `Casks/duofx.rb`:
+The cask is generated, not checked in: `scripts/release.sh` writes `build/duofx.rb` with the version and SHA-256 of the DMG it just uploaded, so a stale checksum cannot be published. Pass `--tap` to push it to [amjadjibon/homebrew-tap](https://github.com/amjadjibon/homebrew-tap):
 
 ```bash
-cp build/duofx.rb ../homebrew-tap/Casks/duofx.rb
-cd ../homebrew-tap && git commit -am "duofx 0.1.0" && git push
+./scripts/release.sh --tap amjadjibon/homebrew-tap
 ```
 
-Then `brew install --cask amjadjibon/tap/duofx` resolves. Verify with `brew audit --cask --online amjadjibon/tap/duofx` before pushing.
+That clones the tap, writes `Casks/duofx.rb`, and commits `duofx <version>` only if the cask actually changed, always after the GitHub release exists so the tap never points at a missing download. Omit `--tap` to leave the tap alone and just produce `build/duofx.rb`.
 
-Homebrew quarantines downloaded apps, so **the DMG must be Developer ID signed and notarized** or `brew install` will place an app that macOS refuses to open. A locally packaged DMG is not sufficient for the tap.
+Installation is then `brew install --cask amjadjibon/tap/duofx`.
+
+Homebrew quarantines apps installed from a cask, unlike the plain binaries its formulae ship, so **the DMG must be Developer ID signed and notarized** or `brew install --cask` will place an app that macOS refuses to open.
 
 ## License
 

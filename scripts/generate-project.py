@@ -72,7 +72,7 @@ for name in ("Debug", "Release"):
     project_configs.append(add("project:" + name, f'isa = XCBuildConfiguration; name = {name}; buildSettings = {{ MACOSX_DEPLOYMENT_TARGET = 14.0; SDKROOT = macosx; ARCHS = arm64; SWIFT_VERSION = 5.0; CLANG_ENABLE_MODULES = YES; }};'))
     optimization = "-Onone" if name == "Debug" else "-O"
     target_configs.append(add("target:" + name, f'''isa = XCBuildConfiguration; name = {name}; baseConfigurationReference = {uid("Signing.xcconfig")}; buildSettings = {{
-        PRODUCT_NAME = DuoFX; PRODUCT_BUNDLE_IDENTIFIER = com.duofx.DuoFX;
+        PRODUCT_NAME = DuoFX; PRODUCT_BUNDLE_IDENTIFIER = com.amjadjibon.duofx;
         INFOPLIST_FILE = DuoFX/Info.plist; GENERATE_INFOPLIST_FILE = NO;
         ENABLE_APP_SANDBOX = NO; ENABLE_HARDENED_RUNTIME = YES;
         SWIFT_OPTIMIZATION_LEVEL = "{optimization}";

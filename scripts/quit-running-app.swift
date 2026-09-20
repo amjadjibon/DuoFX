@@ -1,6 +1,6 @@
 import AppKit
 
-let apps = NSRunningApplication.runningApplications(withBundleIdentifier: "com.duofx.DuoFX")
+let apps = NSRunningApplication.runningApplications(withBundleIdentifier: "com.amjadjibon.duofx")
 for app in apps where !app.isTerminated {
     guard app.terminate() else {
         fputs("DuoFX could not quit. Use Quit DuoFX in the menu bar, then run the installer again.\n", stderr)

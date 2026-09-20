@@ -44,7 +44,7 @@ if [[ ! -d "$source_app" || -L "$destination" || ( -e "$destination" && ! -d "$d
   exit 1
 fi
 bundle_id=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$source_app/Contents/Info.plist")
-if [[ "$bundle_id" != com.duofx.DuoFX ]]; then
+if [[ "$bundle_id" != com.amjadjibon.duofx ]]; then
   printf 'The image does not contain the expected DuoFX application.\n' >&2
   exit 1
 fi

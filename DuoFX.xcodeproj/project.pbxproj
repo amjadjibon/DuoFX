@@ -88,7 +88,7 @@ E68A981E84AD9949AA570A4C = { isa = PBXGroup; children = (4BB80C8A3EDA9DDC21ECC9A
 E2AA269EB967A8853A258BFA = { isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
 2B23A31EEC75B029432F2445 = { isa = XCBuildConfiguration; name = Debug; buildSettings = { MACOSX_DEPLOYMENT_TARGET = 14.0; SDKROOT = macosx; ARCHS = arm64; SWIFT_VERSION = 5.0; CLANG_ENABLE_MODULES = YES; }; };
 EDDA600A3F771F810A8065C9 = { isa = XCBuildConfiguration; name = Debug; baseConfigurationReference = F1E29A4B751E043A1BC240DE; buildSettings = {
-        PRODUCT_NAME = DuoFX; PRODUCT_BUNDLE_IDENTIFIER = com.duofx.DuoFX;
+        PRODUCT_NAME = DuoFX; PRODUCT_BUNDLE_IDENTIFIER = com.amjadjibon.duofx;
         INFOPLIST_FILE = DuoFX/Info.plist; GENERATE_INFOPLIST_FILE = NO;
         ENABLE_APP_SANDBOX = NO; ENABLE_HARDENED_RUNTIME = YES;
         SWIFT_OPTIMIZATION_LEVEL = "-Onone";
@@ -98,7 +98,7 @@ EDDA600A3F771F810A8065C9 = { isa = XCBuildConfiguration; name = Debug; baseConfi
     }; };
 07CA1E69F6068DEA30A4DA6B = { isa = XCBuildConfiguration; name = Release; buildSettings = { MACOSX_DEPLOYMENT_TARGET = 14.0; SDKROOT = macosx; ARCHS = arm64; SWIFT_VERSION = 5.0; CLANG_ENABLE_MODULES = YES; }; };
 594BCDCC96599D88EF772A08 = { isa = XCBuildConfiguration; name = Release; baseConfigurationReference = F1E29A4B751E043A1BC240DE; buildSettings = {
-        PRODUCT_NAME = DuoFX; PRODUCT_BUNDLE_IDENTIFIER = com.duofx.DuoFX;
+        PRODUCT_NAME = DuoFX; PRODUCT_BUNDLE_IDENTIFIER = com.amjadjibon.duofx;
         INFOPLIST_FILE = DuoFX/Info.plist; GENERATE_INFOPLIST_FILE = NO;
         ENABLE_APP_SANDBOX = NO; ENABLE_HARDENED_RUNTIME = YES;
         SWIFT_OPTIMIZATION_LEVEL = "-O";

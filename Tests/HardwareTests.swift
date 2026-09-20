@@ -12,7 +12,7 @@ final class HardwareTests: XCTestCase {
         guard CGPreflightScreenCaptureAccess() else {
             throw XCTSkip("The test runner needs existing Screen Recording access; this test does not request it")
         }
-        let app = try XCTUnwrap(NSRunningApplication.runningApplications(withBundleIdentifier: "com.duofx.DuoFX").first,
+        let app = try XCTUnwrap(NSRunningApplication.runningApplications(withBundleIdentifier: "com.amjadjibon.duofx").first,
                                "Run the installed DuoFX app before this test")
         let all = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: false)
         let ownWindows = all.windows.filter { $0.owningApplication?.processID == app.processIdentifier }

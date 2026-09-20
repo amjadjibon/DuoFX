@@ -17,7 +17,7 @@ final class ScreenCaptureService: ScreenCapturing {
     private var output: CaptureOutput?
     private var identityWindow: NSWindow?
     private var generation = 0
-    private let queue = DispatchQueue(label: "com.duofx.capture", qos: .userInteractive)
+    private let queue = DispatchQueue(label: "com.amjadjibon.duofx.capture", qos: .userInteractive)
 
     func start(displayID: CGDirectDisplayID,
                onFrame: @escaping @Sendable (CVPixelBuffer) -> Void,

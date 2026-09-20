@@ -37,7 +37,7 @@ final class HIDAngleSensor {
 }
 
 private final class HIDWorker: @unchecked Sendable {
-    private let queue = DispatchQueue(label: "com.duofx.sensor", qos: .userInteractive)
+    private let queue = DispatchQueue(label: "com.amjadjibon.duofx.sensor", qos: .userInteractive)
     private var manager: IOHIDManager?
     private var device: IOHIDDevice?
     private var timer: DispatchSourceTimer?

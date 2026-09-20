@@ -1,6 +1,5 @@
 import Image from "next/image";
 import { site } from "@/site.config";
-import { InstallCommand } from "./install-command";
 import { ThemeToggle } from "./theme-toggle";
 
 const modes = [
@@ -252,15 +251,11 @@ function Install() {
           Free and open source.
         </h2>
         <p className="mt-5 leading-relaxed text-muted text-pretty">
-          DuoFX is {site.license} licensed. No purchase, no license key, no account — install it
-          with Homebrew or grab the DMG straight from GitHub.
+          DuoFX is {site.license} licensed. No purchase, no license key, no account — download
+          the DMG from GitHub and drag it to Applications.
         </p>
 
-        <div className="mt-10">
-          <InstallCommand command={site.brewCommand} />
-        </div>
-
-        <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+        <div className="mt-10 flex flex-col gap-3 sm:flex-row">
           <a
             href={site.releasesUrl}
             className="w-full rounded-full bg-accent px-7 py-3.5 text-[15px] font-semibold text-accent-fg transition-opacity hover:opacity-90"
@@ -276,13 +271,23 @@ function Install() {
         </div>
         <p className="mt-4 text-xs text-muted">{site.requirements}</p>
 
+        <div className="mt-8 rounded-2xl border border-line bg-surface-2 p-6 text-left">
+          <p className="text-sm font-medium">First launch needs one extra step</p>
+          <p className="mt-2 text-sm leading-relaxed text-muted text-pretty">
+            DuoFX is not notarized yet, so macOS blocks the first double-click and says the app
+            &ldquo;is damaged&rdquo;. It is not — that is Gatekeeper declining an un-notarized app.
+            Right-click DuoFX in Applications, choose <strong className="text-body">Open</strong>,
+            and confirm. Only the first launch needs it.
+          </p>
+        </div>
+
         <div className="mt-12 rounded-3xl border border-line bg-surface p-8 text-left">
           <ul className="space-y-3.5 text-[15px]">
             {[
               "Every animation, unlocked — there is no paid tier",
               "No account, no telemetry, no network requests at all",
               "Readable source you can audit, fork, and build yourself",
-              "Uninstall cleanly with brew uninstall --zap",
+              "Delete it by dragging to the Trash — nothing else is installed",
             ].map((line) => (
               <li key={line} className="flex gap-3">
                 <svg

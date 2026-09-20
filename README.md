@@ -6,11 +6,15 @@ Requires **macOS 14 or later, Apple silicon, and Xcode 15 or later**. Build and 
 
 ## Install
 
+Download the DMG from [Releases](https://github.com/amjadjibon/DuoFX/releases/latest), open it, and drag DuoFX to Applications.
+
+Releases are not yet notarized, so macOS refuses the first plain double-click and reports that DuoFX "is damaged and can't be opened". That is Gatekeeper declining an un-notarized app, not a corrupted download. Right-click the installed app, choose **Open**, and confirm; only the first launch needs it. From Terminal the equivalent is:
+
 ```sh
-brew install --cask amjadjibon/tap/duofx
+xattr -dr com.apple.quarantine /Applications/DuoFX.app
 ```
 
-Or download the DMG from [Releases](https://github.com/amjadjibon/DuoFX/releases/latest), open it, and drag DuoFX to Applications.
+A Homebrew cask is prepared but not published, because Homebrew quarantines what a cask installs and there is no way for the user to approve it the way right-click Open does. See [Homebrew tap](#homebrew-tap).
 
 ## Run
 

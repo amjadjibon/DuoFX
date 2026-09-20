@@ -47,6 +47,21 @@ compatibility_notes() {
 - **Apple silicon Macs (M-series, arm64)** running **macOS 14 Sonoma or later**.
 - This DMG does **not support Intel Macs**.
 - Automatic lid animation requires a **MacBook with a compatible lid-angle sensor**. Sensor availability varies by model; manual preview is available when the sensor is unsupported.
+
+## Opening DuoFX the first time
+
+This build is **not notarized**, so macOS refuses it on a plain double-click and reports that DuoFX "is damaged and can't be opened". Nothing is wrong with the download; that is Gatekeeper declining an app Apple has not notarized.
+
+1. Open the DMG and drag **DuoFX** to **Applications**.
+2. Right-click `/Applications/DuoFX.app`, choose **Open**, and confirm at the prompt.
+
+Only the first launch needs this. The same thing from Terminal:
+
+```sh
+xattr -dr com.apple.quarantine /Applications/DuoFX.app
+```
+
+Verify the download against the published `.sha256` first if you would rather check it before removing the quarantine flag.
 EOF
 }
 tag=''

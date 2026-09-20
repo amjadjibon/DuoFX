@@ -12,5 +12,4 @@ export const site = {
   repoUrl: "https://github.com/amjadjibon/DuoFX",
   releasesUrl: "https://github.com/amjadjibon/DuoFX/releases/latest",
   sponsorUrl: "https://github.com/sponsors/amjadjibon",
-  brewCommand: "brew install --cask amjadjibon/tap/duofx",
 } as const;

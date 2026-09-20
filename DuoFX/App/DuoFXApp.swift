@@ -24,6 +24,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApplication.shared.setActivationPolicy(.accessory)
         coordinator.start()
+        Task { await model.license.revalidateIfNeeded() }
         PerformanceRun.shared?.start(model: model, coordinator: coordinator)
     }
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
@@ -42,10 +43,13 @@ private struct MenuView: View {
     @Bindable var model: AppModel
     let coordinator: EffectCoordinator
     var body: some View {
-        Toggle("Enable effect", isOn: $model.isEnabled)
+        Toggle("Enable effect", isOn: Binding(get: { model.isEnabled }, set: { model.requestEnable($0) }))
         Toggle("Sound effects", isOn: $model.configuration.soundEnabled)
         Button("Pause all effects") { coordinator.pause() }
             .keyboardShortcut(".", modifiers: [.command])
+        if !model.license.isLicensed {
+            Button("Buy a license…") { NSWorkspace.shared.open(LicenseManager.purchaseURL) }
+        }
         if let message = model.errorMessage { Text(message) }
         Divider()
         Button {

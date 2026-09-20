@@ -77,7 +77,13 @@ When upgrading from an old build, quit DuoFX, remove its existing entry from **S
 - Asynchronous HID discovery/polling on a dedicated queue, Apple vendor/product and usage checks, bounded report decoding, repeated-read failure handling, and explicit device teardown.
 - Time-based angle smoothing, signed velocity, and hysteresis. Capture stops when the overlay becomes hidden, when paused, on sleep/session inactivity/lock, and on quit. Screen configuration changes rebuild the capture target.
 
-All captured content stays on the device in memory. The app has no network, analytics, audio recording, or frame-saving functionality. Blur sweep and Soft fold leave the uncovered desktop transparent and preserve desktop coordinates. Perspective covers the original desktop with the tilted capture and a black backdrop. Settings and menu controls remain above all effects; mouse input always passes through to the original desktop positions.
+All captured content stays on the device in memory: DuoFX has no analytics, audio recording, or frame-saving functionality, and never uploads a frame. Blur sweep and Soft fold leave the uncovered desktop transparent and preserve desktop coordinates. Perspective covers the original desktop with the tilted capture and a black backdrop. Settings and menu controls remain above all effects; mouse input always passes through to the original desktop positions.
+
+The only network activity DuoFX performs is license activation and validation, described below.
+
+## Purchasing
+
+DuoFX is a one-time purchase. **Settings → License** shows **Buy a license…**, which opens the Lemon Squeezy checkout page, and a field to activate the license key emailed after purchase. Activation and validation call Lemon Squeezy's License API directly (no separate account or backend); a validated license stays active offline for up to 14 days before DuoFX asks to reconnect. **Deactivate this Mac…** frees the license for use on another Mac. **Enable effect** is blocked, with a link back to this section, until a license is activated.
 
 ## Validation
 

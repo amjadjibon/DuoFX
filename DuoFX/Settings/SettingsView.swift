@@ -21,7 +21,7 @@ struct SettingsView: View {
         .flatMap(NSImage.init(contentsOf:)) ?? NSApplication.shared.applicationIconImage!
 
     private enum SettingsSection: String, CaseIterable, Identifiable {
-        case appearance = "Effect", sound = "Sound", setup = "Setup"
+        case appearance = "Effect", sound = "Sound", setup = "Setup", license = "License"
         var id: Self { self }
     }
     private var accent: Color {
@@ -50,6 +50,7 @@ struct SettingsView: View {
                             case .appearance: appearanceControls
                             case .sound: soundControls
                             case .setup: setupControls
+                            case .license: LicenseSettingsView(license: model.license)
                             }
                         }.frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, 4)
                     }
@@ -100,7 +101,7 @@ struct SettingsView: View {
             }
             Spacer()
             VStack(alignment: .trailing, spacing: 4) {
-                Toggle("Enable effect", isOn: $model.isEnabled).toggleStyle(.switch)
+                Toggle("Enable effect", isOn: Binding(get: { model.isEnabled }, set: { model.requestEnable($0) })).toggleStyle(.switch)
                 Text(model.isEnabled ? "Runs with Settings closed" : "Try the preview before enabling")
                     .font(.caption).foregroundStyle(.secondary)
             }
@@ -348,7 +349,9 @@ struct SettingsView: View {
         HStack(alignment: .top, spacing: 10) {
             Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
             Text(message).font(.callout).textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading)
-            Button("Open setup") { section = .setup }
+            Button(model.license.isLicensed ? "Open setup" : "Open license") {
+                section = model.license.isLicensed ? .setup : .license
+            }
         }.padding(14).background(Color.orange.opacity(0.08))
     }
 

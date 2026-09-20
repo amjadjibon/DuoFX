@@ -50,10 +50,12 @@ final class AppModel {
     var errorMessage: String?
     var sensorDiagnostic = SensorDiagnostic()
     var isCapturing = false
+    let license: LicenseManager
     @ObservationIgnored private let defaults: UserDefaults
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
+        license = LicenseManager(defaults: defaults)
         if let data = defaults.data(forKey: "effectConfiguration"),
            let saved = try? JSONDecoder().decode(EffectConfiguration.self, from: data) {
             configuration = saved.validated()
@@ -74,6 +76,14 @@ final class AppModel {
     }
 
     func pause() { isEnabled = false }
+
+    func requestEnable(_ enabled: Bool) {
+        guard !enabled || license.isLicensed else {
+            errorMessage = "Activate your DuoFX license in Settings → License to enable the effect."
+            return
+        }
+        isEnabled = enabled
+    }
 
     func canSavePreset(named name: String) -> Bool {
         let name = name.trimmingCharacters(in: .whitespacesAndNewlines)

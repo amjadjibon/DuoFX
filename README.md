@@ -6,15 +6,21 @@ Requires **macOS 14 or later, Apple silicon, and Xcode 15 or later**. Build and 
 
 ## Install
 
-Download the DMG from [Releases](https://github.com/amjadjibon/DuoFX/releases/latest), open it, and drag DuoFX to Applications.
+```bash
+brew install --cask amjadjibon/tap/duofx
+```
 
-Releases are not yet notarized, so macOS refuses the first plain double-click and reports that DuoFX "is damaged and can't be opened". That is Gatekeeper declining an un-notarized app, not a corrupted download. Right-click the installed app, choose **Open**, and confirm; only the first launch needs it. From Terminal the equivalent is:
+Or download the DMG from [Releases](https://github.com/amjadjibon/DuoFX/releases/latest), open it, and drag DuoFX to Applications.
+
+### First launch
+
+Releases are not notarized yet, so macOS refuses the first launch and reports that DuoFX "is damaged and can't be opened". That is Gatekeeper declining an un-notarized app, not a corrupted download. Clear the quarantine flag once:
 
 ```sh
 xattr -dr com.apple.quarantine /Applications/DuoFX.app
 ```
 
-A Homebrew cask is prepared but not published, because Homebrew quarantines what a cask installs and there is no way for the user to approve it the way right-click Open does. See [Homebrew tap](#homebrew-tap).
+Or open **System Settings → Privacy & Security** after the failed launch and choose **Open Anyway**. Only the first launch needs this. A Homebrew install always needs it, because Homebrew quarantines everything a cask installs; notarization is what removes the step for both routes.
 
 ### Screen Recording permission
 
@@ -203,14 +209,14 @@ Signing and notarization are the same as `scripts/package.sh`: uploading to GitH
 The cask is generated, not checked in: `scripts/release.sh` writes `build/duofx.rb` with the version and SHA-256 of the DMG it just uploaded, so a stale checksum cannot be published. Pass `--tap` to push it to [amjadjibon/homebrew-tap](https://github.com/amjadjibon/homebrew-tap):
 
 ```bash
-./scripts/release.sh --tap amjadjibon/homebrew-tap
+./scripts/release.sh vX.Y.Z --tap amjadjibon/homebrew-tap
 ```
 
 That clones the tap, writes `Casks/duofx.rb`, and commits `duofx <version>` only if the cask actually changed, always after the GitHub release exists so the tap never points at a missing download. Omit `--tap` to leave the tap alone and just produce `build/duofx.rb`.
 
 Installation is then `brew install --cask amjadjibon/tap/duofx`.
 
-Homebrew quarantines apps installed from a cask, unlike the plain binaries its formulae ship, so **the DMG must be Developer ID signed and notarized** or `brew install --cask` will place an app that macOS refuses to open.
+Homebrew quarantines apps installed from a cask, unlike the plain binaries its formulae ship, and `--no-quarantine` was removed in Homebrew 7. Until the DMG is Developer ID signed and notarized, `brew install --cask` therefore places an app macOS refuses to open until the user clears the flag by hand; see [First launch](#first-launch).
 
 ## License
 

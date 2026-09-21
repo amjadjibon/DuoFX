@@ -74,7 +74,7 @@ function Header() {
     <header className="fixed inset-x-0 top-0 z-50 px-4 pt-3 sm:pt-4">
       <div className="mx-auto flex h-14 max-w-2xl items-center justify-between gap-4 rounded-full border border-line/80 bg-ink/70 py-2 pr-2 pl-5 shadow-lg shadow-shot-shadow backdrop-blur-xl backdrop-saturate-150">
         <a href="#top" className="flex shrink-0 items-center gap-2.5">
-          <Image src="/logo.png" alt="" width={24} height={24} className="rounded-[6px]" />
+          <Image src="/logo.png" alt="" width={24} height={24} className="rounded-md" />
           <span className="text-[15px] font-semibold tracking-tight">{site.name}</span>
         </a>
         <nav className="flex items-center gap-5 text-sm text-muted">
@@ -105,7 +105,7 @@ function Hero() {
     <section id="top" className="relative overflow-hidden px-6 pt-28 pb-16 sm:pt-36">
       <div
         aria-hidden
-        className="pointer-events-none absolute top-[-14rem] left-1/2 h-[30rem] w-[52rem] -translate-x-1/2 rounded-full bg-accent/12 blur-[120px]"
+        className="pointer-events-none absolute -top-56 left-1/2 h-120 w-208 -translate-x-1/2 rounded-full bg-accent/12 blur-[120px]"
       />
       <div className="relative mx-auto max-w-3xl text-center">
         <p className="inline-flex items-center gap-2 rounded-full border border-line bg-surface px-3.5 py-1.5 text-xs text-muted">

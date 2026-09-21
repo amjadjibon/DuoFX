@@ -19,8 +19,11 @@ class ReleaseTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
-        for folder in ("scripts", "DuoFX", "bin"):
+        for folder in ("scripts", "DuoFX", "bin", "Web"):
             (self.root / folder).mkdir()
+        # Deliberately behind the tag under test, so an ordinary run bumps it.
+        (self.root / "Web/site.config.ts").write_text(
+            'export const site = {\n  name: "DuoFX",\n  version: "0.0.9",\n} as const;\n')
         shutil.copy(SOURCE, self.root / "scripts/release.sh")
         (self.root / "DuoFX/Info.plist").write_bytes(
             plistlib.dumps({"CFBundleShortVersionString": "0.1.0", "CFBundleVersion": "42"}))
@@ -49,7 +52,7 @@ if tool == "git":
         if "--verify" in args: sys.exit(0 if os.getenv("LOCAL_TAG") else 1)
         print("a" * 40)
     elif args[0] == "rev-list": print("42")
-    elif args[0] in ("tag", "push"): pass
+    elif args[0] in ("tag", "push", "add", "commit", "reset"): pass
     elif args[0] == "status": print(" M changed" if os.getenv("DIRTY") else "")
     elif args[:2] == ["remote", "get-url"]: print("git@github.com:owner/DuoFX.git")
     elif args[0] == "ls-remote":
@@ -118,12 +121,13 @@ elif tool != "codesign": sys.exit(91)
                      if call[:3] == ["gh", "repo", "clone"] and call[3] == "owner/homebrew-tap")
         create = next(i for i, call in enumerate(calls) if call[:3] == ["gh", "release", "create"])
         self.assertLess(create, clone, "the tap must not be updated before the release exists")
-        commit = next(call for call in calls if call[:1] == ["git"] and "commit" in call)
+        checkout = calls[clone][4]
+        commit = next(call for call in calls
+                      if call[:3] == ["git", "-C", checkout] and "commit" in call)
         self.assertIn("duofx 0.1.0", commit)
         self.assertTrue(any("push" in call for call in calls if call[0] == "git"))
         # The checkout is a temporary clone the script removes, so assert on the
         # staging call into it and on the generated cask that survives the run.
-        checkout = calls[clone][4]
         self.assertIn(["git", "-C", checkout, "add", "Casks/duofx.rb"], calls)
         cask = (self.root / "build/duofx.rb").read_text()
         self.assertIn('cask "duofx" do', cask)
@@ -138,7 +142,9 @@ elif tool != "codesign": sys.exit(91)
         result = self.run_release("--tap", "owner/homebrew-tap", TAP_UNCHANGED="1")
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("already up to date", result.stdout)
-        self.assertFalse(any("commit" in call for call in self.calls() if call[0] == "git"))
+        # The site bump has its own commit, so look only at the tap checkout.
+        self.assertFalse(any("commit" in call for call in self.calls()
+                             if call[:2] == ["git", "-C"]))
 
     def test_draft_prerelease_and_notes_path_with_spaces(self):
         notes = self.root / "release notes.md"
@@ -209,6 +215,65 @@ elif tool != "codesign": sys.exit(91)
     def test_upload_failure_is_reported_without_retrying(self):
         self.assertNotEqual(self.run_release(FAIL_UPLOAD="1").returncode, 0)
         self.assertEqual(sum(call[:3] == ["gh", "release", "create"] for call in self.calls()), 1)
+
+    def site_version(self):
+        return (self.root / "Web/site.config.ts").read_text()
+
+    def test_site_version_is_bumped_and_committed_before_the_tag(self):
+        result = self.run_release()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn('version: "0.1.0"', self.site_version())
+        self.assertNotIn("0.0.9", self.site_version())
+        calls = self.calls()
+        commit = next(i for i, call in enumerate(calls)
+                      if call[0] == "git" and "commit" in call and call[1] != "-C")
+        self.assertIn("chore(web): advertise 0.1.0 on the site", calls[commit])
+        staged = next(i for i, call in enumerate(calls) if call[:2] == ["git", "add"])
+        tagged = next(i for i, call in enumerate(calls) if call[:2] == ["git", "tag"])
+        # The tag has to describe a tree that already names the new version.
+        self.assertLess(staged, commit)
+        self.assertLess(commit, tagged)
+        self.assertIn("Site version 0.0.9 -> 0.1.0.", result.stdout)
+
+    def test_the_full_tag_including_a_suffix_reaches_the_site(self):
+        # The bundle carries only 0.1.0, but the site should say what shipped.
+        self.assertEqual(self.run_release(tag="v0.1.0-beta.1").returncode, 0)
+        self.assertIn('version: "0.1.0-beta.1"', self.site_version())
+
+    def test_an_already_current_site_version_is_not_recommitted(self):
+        (self.root / "Web/site.config.ts").write_text(
+            'export const site = {\n  name: "DuoFX",\n  version: "0.1.0",\n} as const;\n')
+        result = self.run_release()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("Site version is already 0.1.0.", result.stdout)
+        self.assertFalse(any(call[0] == "git" and call[1] != "-C" and "commit" in call
+                             for call in self.calls()))
+
+    def test_a_failed_build_rewinds_the_unpushed_site_bump(self):
+        self.assertNotEqual(self.run_release(FAIL_BUILD="1").returncode, 0)
+        self.assertIn(["git", "reset", "--quiet", "--hard", HEAD], self.calls())
+
+    def test_a_pushed_site_bump_is_left_alone_when_the_upload_fails(self):
+        # Rewinding after the push would diverge from origin, so the tag goes
+        # and the commit stays.
+        self.assertNotEqual(self.run_release(FAIL_UPLOAD="1").returncode, 0)
+        calls = self.calls()
+        self.assertIn(["git", "tag", "-d", "v0.1.0"], calls)
+        self.assertFalse(any(call[:2] == ["git", "reset"] for call in calls))
+
+    def test_a_missing_site_config_stops_the_release(self):
+        (self.root / "Web/site.config.ts").unlink()
+        result = self.run_release()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("cannot set the site version", result.stderr)
+        self.assertFalse(any(call[:2] == ["git", "tag"] for call in self.calls()))
+
+    def test_dry_run_reports_the_site_bump_without_making_it(self):
+        result = self.run_release("--dry-run")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("Would set the site version", result.stdout)
+        self.assertIn("from 0.0.9 to 0.1.0", result.stdout)
+        self.assertIn("0.0.9", self.site_version())
 
 
 if __name__ == "__main__":

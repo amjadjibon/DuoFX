@@ -8,9 +8,11 @@ Usage: scripts/release.sh vX.Y.Z[-suffix] [--draft] [--prerelease]
                           [--notes-file PATH] [--tap OWNER/REPO] [--dry-run]
 
 Build a fresh Release DMG and upload it with a SHA-256 checksum to GitHub.
-The tag is the only source of the version: it is created before the build so
-scripts/configure-version.py stamps the bundle from it. Nothing records a
-version in the source tree, so there is no version file to bump or commit.
+The tag is the only source of the version: scripts/configure-version.py stamps
+the bundle from it, and the site's version field is set from it too. The bundle
+is never hand-edited; the one version the tree does record is Web/site.config.ts,
+which this script bumps and commits before tagging, so the tag describes a tree
+that advertises the release it is.
 Requires a clean checkout, HEAD pushed to origin, gh authentication, and Xcode.
 Existing releases are never overwritten. Existing tags must point to HEAD.
 
@@ -25,7 +27,11 @@ EOF
 }
 
 die() { printf 'Error: %s\n' "$*" >&2; exit 1; }
+site_config='Web/site.config.ts'
 tag_created=false
+bump_committed=false
+branch_pushed=false
+base_commit=''
 notes_temp=''
 # A single EXIT trap: a second `trap ... EXIT` would silently replace this one
 # and the tag would survive a failed release.
@@ -36,6 +42,13 @@ cleanup() {
   # attempt fails its own "tag already exists" check.
   if [[ "$tag_created" == true && $status -ne 0 ]]; then
     git tag -d "$tag" >/dev/null 2>&1 || true
+  fi
+  # The bump is committed before the tag, so a failed release would otherwise
+  # leave a version claim for something that never shipped. Rewinding is safe
+  # only while the commit is local: the checkout was clean before it was made,
+  # so base_commit is the exact state to return to. Once pushed, leave it.
+  if [[ "$bump_committed" == true && "$branch_pushed" == false && $status -ne 0 ]]; then
+    git reset --quiet --hard "$base_commit" >/dev/null 2>&1 || true
   fi
   return $status
 }
@@ -110,16 +123,52 @@ asset_name="DuoFX-$tag-arm64.dmg"
 asset="build/$asset_name"
 checksum="$asset.sha256"
 release_notes="build/DuoFX-$tag-release-notes.md"
-release_command=(gh release create "$tag" "$asset" "$checksum" --repo "$repository"
-                 --target "$head_commit" --title "DuoFX $tag" --notes-file "$release_notes")
-if [[ -z "$notes_file" ]]; then
-  release_command+=(--generate-notes)
-fi
-if [[ "$draft" == true ]]; then release_command+=(--draft); fi
-if [[ "$prerelease" == true ]]; then release_command+=(--prerelease); fi
+release_command=()
+# Assembled on demand: --target must name the commit the tag ends up on, which
+# is not known until the site version bump below has been committed.
+build_release_command() {
+  release_command=(gh release create "$tag" "$asset" "$checksum" --repo "$repository"
+                   --target "$head_commit" --title "DuoFX $tag" --notes-file "$release_notes")
+  if [[ -z "$notes_file" ]]; then
+    release_command+=(--generate-notes)
+  fi
+  if [[ "$draft" == true ]]; then release_command+=(--draft); fi
+  if [[ "$prerelease" == true ]]; then release_command+=(--prerelease); fi
+}
+
+site_version() { awk -F'"' '/^  version: "/ { print $2; exit }' "$site_config"; }
+
+# The published site should name the version it is shipping, so the bump happens
+# here rather than by hand after the fact. It is committed before the tag is
+# created, which puts it in the tree the tag describes. Already correct is a
+# no-op: re-running a release commits nothing.
+sync_site_version() {
+  [[ -f "$site_config" ]] || die "Missing $site_config; cannot set the site version."
+  local current
+  current=$(site_version)
+  [[ -n "$current" ]] || die "No version field found in $site_config."
+  if [[ "$current" == "$version" ]]; then
+    printf 'Site version is already %s.\n' "$version"
+    return
+  fi
+  sed -i '' -e "s|^  version: \".*\",\$|  version: \"$version\",|" "$site_config"
+  [[ "$(site_version)" == "$version" ]] || die "Could not set the version in $site_config."
+  git add "$site_config"
+  git commit --quiet -m "chore(web): advertise $version on the site"
+  bump_committed=true
+  printf 'Site version %s -> %s.\n' "$current" "$version"
+}
 
 if [[ "$dry_run" == true ]]; then
+  build_release_command
   printf 'Tag %s at %s, then build version %s for %s.\n' "$tag" "$head_commit" "$marketing" "$repository"
+  current_site=$([[ -f "$site_config" ]] && site_version || true)
+  if [[ "$current_site" == "$version" ]]; then
+    printf 'Site version in %s is already %s.\n' "$site_config" "$version"
+  else
+    printf 'Would set the site version in %s from %s to %s and commit it.\n' \
+      "$site_config" "${current_site:-unknown}" "$version"
+  fi
   printf 'Would run: bash scripts/package.sh\n'
   printf 'Would create: %s and %s\n' "$asset" "$checksum"
   printf 'Would run:'; printf ' %q' "${release_command[@]}"; printf '\n'
@@ -148,6 +197,13 @@ if gh release view "$tag" --repo "$repository" >/dev/null 2>&1; then
   die "Release $tag already exists. Choose a new version; releases are not overwritten."
 fi
 ! git rev-parse -q --verify "refs/tags/$tag" >/dev/null || die "Tag $tag already exists locally."
+
+# Everything above only inspects; this is the first step that writes. Bump the
+# site before tagging so the tag covers it, and remember where to rewind to.
+base_commit=$head_commit
+sync_site_version
+head_commit=$(git rev-parse HEAD)
+build_release_command
 
 # The tag is created before the build because it is what the build reads its
 # version from. cleanup() removes it again if anything below fails.
@@ -210,6 +266,10 @@ if [[ -n "$notes_file" ]]; then
   cat "$notes_file" >> "$notes_temp"
 fi
 mv "$notes_temp" "$release_notes"
+if [[ "$bump_committed" == true ]]; then
+  git push --quiet origin HEAD
+  branch_pushed=true
+fi
 git push --quiet origin "$tag"
 "${release_command[@]}"
 

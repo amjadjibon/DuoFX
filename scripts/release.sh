@@ -233,8 +233,7 @@ cask "duofx" do
   version "${tag#v}"
   sha256 "$sha"
 
-  url "https://github.com/$repository/releases/download/v#{version}/DuoFX-v#{version}-arm64.dmg",
-      verified: "github.com/$repository/"
+  url "https://github.com/$repository/releases/download/v#{version}/DuoFX-v#{version}-arm64.dmg"
   name "DuoFX"
   desc "Menu-bar app that animates the desktop as the MacBook lid closes"
   homepage "https://duofx.amjadjibon.com/"

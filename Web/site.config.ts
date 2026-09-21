@@ -4,7 +4,7 @@ export const site = {
   description:
     "A native macOS menu-bar app that animates your desktop as the MacBook lid closes — blur sweep, soft fold, or perspective tilt. Free, open source, 100% local.",
   url: "https://duofx.amjadjibon.com",
-  version: "0.3.0",
+  version: "0.4.0",
   requirements: "macOS 14 Sonoma or later · Apple silicon",
   license: "Apache-2.0",
   author: { name: "Amjad Hossain", url: "https://amjadjibon.com" },

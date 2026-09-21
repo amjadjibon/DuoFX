@@ -174,12 +174,13 @@ function Customize() {
       lead="Blur radius, edge softness, dimming, motion easing, tilt strength, edge fade, fold shadow, transition width — each one is a slider with a live preview that needs no permissions."
     >
       <div className="mt-14 dark:hidden">
-        <Shot src="/shots/5-settings.webp" alt="The DuoFX settings window" />
+        <Shot src="/shots/5-settings.webp" alt="The DuoFX settings window" height={1248} />
       </div>
       <div className="mt-14 hidden dark:block">
         <Shot
           src="/shots/5-settings-dark.webp"
           alt="The DuoFX settings window in dark appearance"
+          height={1248}
         />
       </div>
     </Section>
@@ -419,14 +420,28 @@ function Section({
   );
 }
 
-function Shot({ src, alt, priority }: { src: string; alt: string; priority?: boolean }) {
+// Desktop captures are 4:3; the settings window is its own shape, so each shot
+// declares the size of the file it points at rather than being stretched to fit.
+function Shot({
+  src,
+  alt,
+  priority,
+  width = 1600,
+  height = 1200,
+}: {
+  src: string;
+  alt: string;
+  priority?: boolean;
+  width?: number;
+  height?: number;
+}) {
   return (
     <div className="overflow-hidden rounded-2xl border border-line bg-surface-2 shadow-2xl shadow-shot-shadow">
       <Image
         src={src}
         alt={alt}
-        width={1600}
-        height={1200}
+        width={width}
+        height={height}
         priority={priority}
         sizes="(min-width: 1024px) 60rem, 100vw"
         className="w-full"
